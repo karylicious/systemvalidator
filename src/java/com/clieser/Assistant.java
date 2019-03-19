@@ -76,13 +76,15 @@ public class Assistant {
     
     public void createLogFile() { 
         try {
-            File file = new File(logDirectoryPath + "\\" + new SimpleDateFormat("yyyyMMddHHmmss").format(new Date()) + ".txt");
-            FileOutputStream outputStream = new FileOutputStream(file);
-            OutputStreamWriter outputWriter = new OutputStreamWriter(outputStream); 
-            
-            Writer theWriter = new BufferedWriter(outputWriter);
-            theWriter.write((String)log);
-            theWriter.close();
+            if(!log.isEmpty()) {
+                File file = new File(logDirectoryPath + "\\" + new SimpleDateFormat("yyyyMMddHHmmss").format(new Date()) + ".txt");
+                FileOutputStream outputStream = new FileOutputStream(file);
+                OutputStreamWriter outputWriter = new OutputStreamWriter(outputStream); 
+
+                Writer theWriter = new BufferedWriter(outputWriter);
+                theWriter.write((String)log);
+                theWriter.close();
+            }
             
         } catch (IOException e) {
             e.printStackTrace();
@@ -91,9 +93,8 @@ public class Assistant {
             
     public Reply terminateTest(String userTemporaryDirectoryPath) {   
         response.add("[INFO] Test has finished\n\n");       
-
-        delete(new File(userTemporaryDirectoryPath));
-        log += userTemporaryDirectoryPath + "\n";
+        System.gc();
+        delete(new File(userTemporaryDirectoryPath));    
         createLogFile();
         return new Reply(response, resultList);
     }
@@ -165,6 +166,7 @@ public class Assistant {
                 }
             }   
             
+            br.close();
             File file = new File(serverDirectoryPath);
             String projectName = file.getName();
             boolean foundApp = false;
@@ -237,7 +239,8 @@ public class Assistant {
                     theWriter.write(System.getProperty( "line.separator" ));
                 }
             }                        
-            theWriter.close();     
+            theWriter.close(); 
+            br.close();
         }
         catch(Exception e){            
             log += e;
@@ -247,8 +250,7 @@ public class Assistant {
         return true;        
     }         
        
-    public void delete(File file){ 
-        log+="hiii";
+    public void delete(File file){        
     	if(file.isDirectory()){ 
             //directory is empty, then delete it
             if(file.list().length==0){    			
@@ -320,8 +322,7 @@ public class Assistant {
             Files.createDirectories(Paths.get(unzipLocation));
         }            
         
-        boolean foundFirstDirectoryInTheZipFile = false;
-        //String firstChild;
+        boolean foundFirstDirectoryInTheZipFile = false;   
         
         while (enu.hasMoreElements()) {
             ZipEntry zipEntry = new ZipEntry((ZipEntry) enu.nextElement());
@@ -330,19 +331,14 @@ public class Assistant {
             
             if (name.endsWith("/")) {
                 if(!foundFirstDirectoryInTheZipFile){
-                    foundFirstDirectoryInTheZipFile = true;                    
-                    //firstChild = name;                    
-                    //if( !hasFoundMultipleProjects)
-                        listOfProjectsToBeTested.add(name);
+                    foundFirstDirectoryInTheZipFile = true;    
+                    listOfProjectsToBeTested.add(name);
                 }
                 file.mkdirs();
                 continue;
             }
             else if (name.contains(".zip")){
-               //hasFoundMultipleProjects = true;
-               listOfProjectsToBeTested.add(name);             
-               //log += name +"\n";
-               //System.out.println(name);
+               listOfProjectsToBeTested.add(name);      
             }
 
             File parent = file.getParentFile();
@@ -362,8 +358,6 @@ public class Assistant {
             fos.close();
             is.close();
         }
-              
-        //log +="projectbeingtested  "+ unzipLocation + "\\" + firstChild +"\n";
         zipFile.close();  
         return listOfProjectsToBeTested;
     }   
@@ -429,8 +423,10 @@ public class Assistant {
 
             String line;            
             while (( line = br.readLine()) != null) {              
-                if ( line.contains("---[HTTP response - http://localhost:8080/" + projectName))
+                if ( line.contains("---[HTTP response - http://localhost:8080/" + projectName)){
+                    br.close();
                     return true;
+                }
             }  
         }
         catch(Exception e){
@@ -446,7 +442,8 @@ public class Assistant {
             BufferedReader br = new BufferedReader(new FileReader(file)); 
 
             String firstLine;            
-            while (( firstLine = br.readLine()) != null) {              
+            while (( firstLine = br.readLine()) != null) { 
+                br.close();
                 return firstLine.contains("---[HTTP request");     
             }  
         }
@@ -465,6 +462,7 @@ public class Assistant {
                 if ( line.contains("S:Envelope"))
                     soapEnvelopeList.add(line);             
             }  
+            br.close();
         }
         catch(Exception e){
             log += e;
