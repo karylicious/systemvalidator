@@ -115,10 +115,14 @@ public class Validator {
                 assistant.addResponse("[INFO] Client has communicated with the Server\n\n");
                 assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client did communicate with the Server","true")); 
                 assistant.addResponse("\n\n");
+                
+                ArrayList<String> serverMethodsList = assistant.getMethodsAvailableOnServer(pathProjectBeingTested);                
+                int numberOfMethodsInvokedByClient = assistant.getNumberOfMethodsInvokedByTheClient(pathProjectBeingTested, serverMethodsList);                
+                assistant.addResponse("[INFO] Client has invoked " + numberOfMethodsInvokedByClient + " out of " + serverMethodsList.size() + " methods\n\n");
             }
         }
         catch(Exception e){
-            assistant.addLog( e);
+            assistant.addLog( e.getMessage());
             assistant.createLogFile();
         }     
         return assistant.terminateTest(userTemporaryDirectoryPath);
@@ -277,10 +281,14 @@ public class Validator {
                 
                 assistant.undeplopyServer(serverDirectoryPath, userTemporaryDirectoryPath);                
                 assistant.addResponse("[INFO] System has undeployed Server\n\n");
+                
+                ArrayList<String> serverMethodsList = assistant.getMethodsAvailableOnServer(clientDirectoryPath);                
+                int numberOfMethodsInvokedByClient = assistant.getNumberOfMethodsInvokedByTheClient(clientDirectoryPath, serverMethodsList);                
+                assistant.addResponse("[INFO] Client has invoked " + numberOfMethodsInvokedByClient + " out of " + serverMethodsList.size() + " methods\n\n");
             }
         }
         catch(Exception e){ 
-            assistant.addLog(e);
+            assistant.addLog(e.getMessage());
             assistant.createLogFile();
         }              
         return assistant.terminateTest(userTemporaryDirectoryPath);

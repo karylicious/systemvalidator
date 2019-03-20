@@ -180,7 +180,7 @@ public class Assistant {
             return foundApp;
         }
         catch(Exception e){            
-            log += e;
+            log += e.getMessage();
             createLogFile();
         }               
         return false;        
@@ -200,7 +200,7 @@ public class Assistant {
             Thread.currentThread().sleep(3000l);
         }
         catch(Exception e){            
-            log += e;
+            log += e.getMessage();
             createLogFile();
         }   
     }
@@ -243,7 +243,7 @@ public class Assistant {
             br.close();
         }
         catch(Exception e){            
-            log += e;
+            log += e.getMessage();
             createLogFile();
             return false;
         }               
@@ -275,18 +275,22 @@ public class Assistant {
     	}
     }    
     
-    public String getClientProjectPath(String unzipLocation, String entryPoint){
-        File file = new File(unzipLocation);
+    public String[] getSubdirectories(String parentDirectoryPath){
+        File file = new File(parentDirectoryPath);
         String[] directories = file.list(new FilenameFilter() {
           @Override
           public boolean accept(File current, String name) {
             return new File(current, name).isDirectory();
           }
         });
-        
+        return directories;
+    }
+    
+    public String getClientProjectPath(String unzipLocation, String entryPoint){      
+        String[] directories = getSubdirectories(unzipLocation);        
         String theEntryPoint = entryPoint.replace('.', '\\');    
+        
         for (int i = 0; i < directories.length; i ++){
-            //log += unzipLocation+"\\"+directories[i]+ "\\build\\classes\\"+ theEntryPoint +".class\n";
             if (new File(unzipLocation+"\\"+directories[i]+ "\\build\\classes\\"+ theEntryPoint+".class").exists()) {
                return unzipLocation+"\\"+directories[i];
             }
@@ -369,7 +373,7 @@ public class Assistant {
     }
         
     public ArrayList<String> getListOfMethodsOnServer(String wsdlFile) {
-        ArrayList<String> list = new ArrayList<String>();
+        ArrayList<String> list = new ArrayList();
         try{
             Document d = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(new FileInputStream(wsdlFile));
             NodeList elements = d.getElementsByTagName("operation");
@@ -394,25 +398,69 @@ public class Assistant {
             }        
         }
         catch(Exception e){
-            log += e;
+            log += e.getMessage();
             createLogFile();
         }
         return list;
     }
     
-    public String getServiceName(String wsdlFile) {        
+    
+    
+    public ArrayList<String> getMethodsAvailableOnServer(String clientDirectoryPath){
+        String[] directories = getSubdirectories(clientDirectoryPath + "\\xml-resources\\web-service-references");
+        String serviceName = directories[0];
+        String localhostDirPath = clientDirectoryPath + "\\xml-resources\\web-service-references\\"+serviceName +"\\wsdl\\localhost_8080";
+
+        directories = getSubdirectories(localhostDirPath);        
+        String wsdlFilePath =  localhostDirPath + "\\" +  directories[0] +"\\" + serviceName + ".wsdl";     
+        return getListOfMethodsOnServer(wsdlFilePath);         
+    }
+            
+    public String getServiceName(String pathProjectBeingTested) {        
+       String[] directories = getSubdirectories(pathProjectBeingTested + "\\xml-resources\\web-service-references");
+       return directories[0];
+    }    
+    
+    public String getServiceNamexx(String wsdlFile) {        
         try{
             Document d = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(new FileInputStream(wsdlFile));
             NodeList elements = d.getElementsByTagName("service");
             return elements.item(0).getAttributes().getNamedItem("name").getNodeValue();          
         }
         catch(Exception e){
-            log += e;
+            log += e.getMessage();
             createLogFile();
         }
         return null;
     }    
-       
+    
+    public int getNumberOfMethodsInvokedByTheClient(String clientDirectoryPath, ArrayList<String> serverMethodsList){
+        int total = 0;
+        try{            
+            File file = new File(clientDirectoryPath + "\\traced-soap-traffic.txt");   
+            BufferedReader br = new BufferedReader(new FileReader(file)); 
+            String line;              
+            
+            while (( line = br.readLine()) != null) {              
+                if ( line.contains("SOAPAction:")){
+                    for (String method : serverMethodsList){
+                        if (line.contains(method)){
+                            total++;               
+                            break;
+                        }
+                    }
+                }
+            }  
+            br.close();
+        }
+        catch(Exception e){
+            log += e.getMessage();
+            createLogFile();
+        }
+        return total;
+    }
+    
+    
     public boolean didServerCommunicatedWithClient(String clientDirectoryPath, String serverDirectoryPath){
         try{
             File file = new File(serverDirectoryPath);
@@ -430,7 +478,7 @@ public class Assistant {
             }  
         }
         catch(Exception e){
-            log += e;
+            log += e.getMessage();
             createLogFile();
         }
         return false;
@@ -447,27 +495,10 @@ public class Assistant {
                 return firstLine.contains("---[HTTP request");     
             }  
         }
-        catch(Exception e){}
-        return false;
-    }
-    
-    public ArrayList<String> getListOfSoapEnvelope(String clientDirectoryPath){
-        ArrayList<String> soapEnvelopeList = new ArrayList();
-        try{
-            File file = new File(clientDirectoryPath + "\\traced-soap-traffic.txt");   
-            BufferedReader br = new BufferedReader(new FileReader(file)); 
-
-            String line;            
-            while (( line = br.readLine()) != null) {              
-                if ( line.contains("S:Envelope"))
-                    soapEnvelopeList.add(line);             
-            }  
-            br.close();
-        }
         catch(Exception e){
-            log += e;
+            log += e.getMessage();
             createLogFile();
         }
-        return soapEnvelopeList;
-    }  
+        return false;
+    }
 }
