@@ -64,7 +64,7 @@ public class Validator {
                 }                
                 
                 assistant.addResponse( "[INFO] Project selected: "+ NameOfTheProjectBeingTested +"\n");            
-                assistant.addResponse("[INFO] System is trying to find the Client stubs\n\n");
+                assistant.addResponse("[INFO] System is searching for the Client stubs\n\n");
                 
                 //Whenever a new web service reference is added on the client, the wsimport command generates the stubs under the following directories
                 if ( !new File(pathProjectBeingTested + "\\build\\generated-sources\\jax-ws").exists() ){
@@ -77,7 +77,7 @@ public class Validator {
                 }          
                 
                 assistant.addResponse("[INFO] System found the Client stubs\n\n");                  
-                assistant.addResponse("[INFO] System is looking for the main class of the Client\n\n");                               
+                assistant.addResponse("[INFO] System is searching for the main class of the Client\n\n");                               
                 assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client is correctly connected to the server","true"));
                 
                 String entryPoint = clientEntryPoint.replace('.', '\\');
@@ -113,12 +113,24 @@ public class Validator {
                 }
                 
                 assistant.addResponse("[INFO] Client has communicated with the Server\n\n");
-                assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client did communicate with the Server","true")); 
-                assistant.addResponse("\n\n");
+                assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client did communicate with the Server","true"));                 
                 
                 ArrayList<String> serverMethodsList = assistant.getMethodsAvailableOnServer(pathProjectBeingTested);                
-                int numberOfMethodsInvokedByClient = assistant.getNumberOfMethodsInvokedByTheClient(pathProjectBeingTested, serverMethodsList);                
-                assistant.addResponse("[INFO] Client has invoked " + numberOfMethodsInvokedByClient + " out of " + serverMethodsList.size() + " methods\n\n");
+                ArrayList<String> listOfInvokedMethodsNames = assistant.getListOfInvokedMethodsNames(pathProjectBeingTested, serverMethodsList);                
+                assistant.addResponse("[INFO] Client has invoked " + listOfInvokedMethodsNames.size() + " out of " + serverMethodsList.size() + " methods\n\n");
+                
+                
+                ArrayList<String> detailsList = assistant.getListOfInvokedMethodsDetails(pathProjectBeingTested, listOfInvokedMethodsNames);
+                if ( !detailsList.isEmpty()){
+                    assistant.addResponse("[INFO] Methods invoked by the Client:");
+                    for (String details : detailsList) {
+                        assistant.addResponse ( details);
+                        if (details.equals(""))
+                            assistant.addResponse("\n\n");
+                    }
+                    
+                }                               
+                assistant.addResponse("\n\n");
             }
         }
         catch(Exception e){
@@ -180,7 +192,7 @@ public class Validator {
 
                 //>>>>>>>>>>>>>>>>>>>>>>>   TESTING SERVER   <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                 
-                assistant.addResponse("[INFO] System is looking for the Server project\n\n");    
+                assistant.addResponse("[INFO] System is searching for the Server project\n\n");    
                 
                 if( serverDirectoryPath.isEmpty() ){
                     assistant.addResponse("[INFO] System did not find the Server project\n\n");
@@ -212,7 +224,7 @@ public class Validator {
                 
                 //>>>>>>>>>>>>>>>>>>>>>>>   TESTING CLIENT   <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                 
-                assistant.addResponse("[INFO] System is trying to find the Client stubs\n\n");
+                assistant.addResponse("[INFO] System is searching for the Client stubs\n\n");
                 
                 //Whenever a new web service reference is added on the client, the wsimport command generates the stubs under the following directories
                 if ( !new File(clientDirectoryPath + "\\build\\generated-sources\\jax-ws").exists() ){
@@ -226,7 +238,7 @@ public class Validator {
                 }          
                 
                 assistant.addResponse("[INFO] System found the Client stubs\n\n");                        
-                assistant.addResponse("[INFO] System is looking for the main class of the Client\n\n");                
+                assistant.addResponse("[INFO] System is searching for the main class of the Client\n\n");                
                 assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client is correctly connected to the server","true"));
                 
                 String entryPoint = clientEntryPoint.replace('.', '\\');
@@ -277,14 +289,28 @@ public class Validator {
                 
                 assistant.addResponse("[INFO] Server has communicated with the Client\n\n");
                 assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Server did communicate with the Client","true"));                
-                assistant.addResponse("\n\n");                
+                                
                 
                 assistant.undeplopyServer(serverDirectoryPath, userTemporaryDirectoryPath);                
                 assistant.addResponse("[INFO] System has undeployed Server\n\n");
                 
-                ArrayList<String> serverMethodsList = assistant.getMethodsAvailableOnServer(clientDirectoryPath);                
-                int numberOfMethodsInvokedByClient = assistant.getNumberOfMethodsInvokedByTheClient(clientDirectoryPath, serverMethodsList);                
-                assistant.addResponse("[INFO] Client has invoked " + numberOfMethodsInvokedByClient + " out of " + serverMethodsList.size() + " methods\n\n");
+                ArrayList<String> serverMethodsList = assistant.getMethodsAvailableOnServer(clientDirectoryPath);   
+                ArrayList<String> listOfInvokedMethodsNames = assistant.getListOfInvokedMethodsNames(clientDirectoryPath, serverMethodsList);                
+                assistant.addResponse("[INFO] Client has invoked " + listOfInvokedMethodsNames.size() + " out of " + serverMethodsList.size() + " methods\n\n");                
+                
+                
+                
+                ArrayList<String> detailsList = assistant.getListOfInvokedMethodsDetails(clientDirectoryPath, listOfInvokedMethodsNames);
+                if ( !detailsList.isEmpty()){
+                    assistant.addResponse("[INFO] Methods invoked by the Client:");
+                    for (String detail : detailsList) {
+                        assistant.addResponse ( detail);
+                        if (detail.equals(""))
+                            assistant.addResponse("\n");
+                    }
+                    
+                }                               
+                assistant.addResponse("\n\n");
             }
         }
         catch(Exception e){ 

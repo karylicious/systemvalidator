@@ -13,6 +13,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.io.StringReader;
 import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -24,7 +25,13 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import javax.activation.DataHandler;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.soap.MessageFactory;
+import javax.xml.soap.SOAPEnvelope;
+import javax.xml.soap.SOAPMessage;
+import javax.xml.soap.SOAPPart;
+import javax.xml.transform.stream.StreamSource;
 import org.w3c.dom.Document;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 /**
@@ -34,15 +41,19 @@ import org.w3c.dom.NodeList;
 
 //Singleton pattern restricts the instantiation of a class and ensures that only one instance of the class exists in the java virtual machine. 
 public class Assistant {
-    private static String currentWorkingDirectory, tempDirectoryPath, logDirectoryPath, log;
+    private static String currentWorkingDirectory, tempDirectoryPath, logDirectoryPath, log, antDirectoryPath;
     private ArrayList<TestResult> resultList;  
     private static Assistant singleInstance = null;
     private ArrayList<String> response;
+    private boolean hasResponseMultipleValues = false;
+    private ArrayList<String> parametersList = new ArrayList();
+    private ArrayList<String> responseValueList = new ArrayList();
 
     private Assistant(){
         currentWorkingDirectory = System.getProperty("user.dir") + "\\src\\main\\java\\com\\clieser";
         tempDirectoryPath = currentWorkingDirectory + "\\Temp";
         logDirectoryPath = currentWorkingDirectory + "\\Logs";
+        antDirectoryPath = "C:\\ant\\bin";
     }
     
     public static Assistant getInstance(){
@@ -126,7 +137,7 @@ public class Assistant {
         try{                         
             //ANT BUILD
             ArrayList<String> commandsList = new ArrayList();
-            commandsList.add("cd C:\\ant\\bin");
+            commandsList.add("cd " + antDirectoryPath);
             commandsList.add("ant -f " + serverDirectoryPath);
             
             String antBuildShFile = userTemporaryDirectoryPath + "\\antbuild.bat";
@@ -137,7 +148,7 @@ public class Assistant {
             
             //ANT RUN-DEPLOY
             commandsList = new ArrayList();
-            commandsList.add("cd C:\\ant\\bin");
+            commandsList.add("cd " + antDirectoryPath);
             commandsList.add("ant -f " + serverDirectoryPath + " run-deploy");
             
             String antDeployShFile = userTemporaryDirectoryPath + "\\antdeploy.bat";
@@ -190,7 +201,7 @@ public class Assistant {
         try{
             //ANT RUN-DEPLOY
             ArrayList<String> commandsList = new ArrayList();
-            commandsList.add("cd C:\\ant\\bin");
+            commandsList.add("cd " + antDirectoryPath);
             commandsList.add("ant -f " + serverDirectoryPath + " run-undeploy");
             
             String antUndeployShFile = userTemporaryDirectoryPath + "\\antundeploy.bat";
@@ -207,7 +218,7 @@ public class Assistant {
         
     public boolean didRunClientAndSaveOutput(String clientEntryPoint, String pathProjectBeingTested, String userTemporaryDirectoryPath) {   
         try{              
-            File classesDirectory = new File(pathProjectBeingTested + "/build/classes");        
+            File classesDirectory = new File(pathProjectBeingTested + "\\build\\classes");        
             ArrayList<String> commandsList = new ArrayList();
             
             commandsList.add("cd " +  classesDirectory.getPath());
@@ -215,9 +226,6 @@ public class Assistant {
             
             final String clientShFile = userTemporaryDirectoryPath + "\\client.bat";
             createNewShFile(clientShFile, commandsList);
-
-            //String[] cmdline = { "/bin/bash", "-c", "bash "+clientShFile+" > "+userTemporaryDirectoryPath + "/client-output.txt"}; 
-            //String[] cmdline = {"cmd /c "+clientShFile}; 
             
             File file = new File(pathProjectBeingTested + "\\traced-soap-traffic.txt");
             FileOutputStream outputStream = new FileOutputStream(file);
@@ -308,7 +316,6 @@ public class Assistant {
         });
         
         for (int i = 0; i < directories.length; i ++){
-            //log += unzipLocation+"\\"+directories[i]+ "\\build\\web\n";
             if (new File(unzipLocation+"\\"+directories[i]+ "\\build\\web").exists()) {
                return unzipLocation+"\\"+directories[i];
             }
@@ -424,7 +431,7 @@ public class Assistant {
     public String getServiceNamexx(String wsdlFile) {        
         try{
             Document d = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(new FileInputStream(wsdlFile));
-            NodeList elements = d.getElementsByTagName("service");
+            NodeList elements = d.getElementsByTagName("service");            
             return elements.item(0).getAttributes().getNamedItem("name").getNodeValue();          
         }
         catch(Exception e){
@@ -434,18 +441,31 @@ public class Assistant {
         return null;
     }    
     
-    public int getNumberOfMethodsInvokedByTheClient(String clientDirectoryPath, ArrayList<String> serverMethodsList){
-        int total = 0;
+    public ArrayList<String> getListOfInvokedMethodsNames(String clientDirectoryPath, ArrayList<String> serverMethodsList){      
+        ArrayList<String> invokedMethodsNameList = new ArrayList();
         try{            
             File file = new File(clientDirectoryPath + "\\traced-soap-traffic.txt");   
             BufferedReader br = new BufferedReader(new FileReader(file)); 
             String line;              
             
+            boolean foundDuplicate = false;
             while (( line = br.readLine()) != null) {              
                 if ( line.contains("SOAPAction:")){
                     for (String method : serverMethodsList){
                         if (line.contains(method)){
-                            total++;               
+                            if ( invokedMethodsNameList.isEmpty())
+                                invokedMethodsNameList.add(method);
+                            else{
+                                for (String methodInvoked : invokedMethodsNameList){
+                                    if (methodInvoked.equals(method)){
+                                        foundDuplicate = true;
+                                        break;
+                                    }                                    
+                                }
+                                if ( !foundDuplicate)
+                                    invokedMethodsNameList.add(method);
+                                foundDuplicate = false;
+                            }              
                             break;
                         }
                     }
@@ -457,9 +477,180 @@ public class Assistant {
             log += e.getMessage();
             createLogFile();
         }
-        return total;
+        return invokedMethodsNameList;
+    }    
+    
+    private NodeList getSoapBodyFirstChildNodes(String soapEnvelope) {
+        NodeList childNodes = null;
+        try {
+            //https://stackoverflow.com/questions/32646444/generate-soap-message-from-java-string
+            MessageFactory msgFactory = MessageFactory.newInstance();
+            SOAPMessage request = msgFactory.createMessage();
+            SOAPPart msgPart = request.getSOAPPart();
+            StreamSource content = new StreamSource(new StringReader(soapEnvelope));
+            msgPart.setContent(content);    
+            
+            SOAPEnvelope envelopee = msgPart.getEnvelope();            
+            
+            //Node Body will always have just one child
+            childNodes = envelopee.getBody().getFirstChild().getChildNodes();            
+            
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        return childNodes;
     }
     
+    
+    private void populateTheParameterListVariableWithTheNodesValue(NodeList nodeList) {
+        //https://www.mkyong.com/java/how-to-read-xml-file-in-java-dom-parser/
+        for (int count = 0; count < nodeList.getLength(); count++) {
+            Node tempNode = nodeList.item(count);
+
+            // make sure it's element node.
+            if (tempNode.getNodeType() == Node.ELEMENT_NODE) {    
+
+                //GET THE VALUES ONLY IF THE CURRENT NODE IS A PARENT
+                // IN CASE IT IS NOT A PARENT, THE NAME OF THE FIRST CHILD WILL ALWAYS RETURN "#text" 
+                // THE "#text" VALUE COMES FROM THE XML SPECIFICATION)
+                if ( !tempNode.getFirstChild().getNodeName().equals("#text") ){
+                    //the user-defined type 
+                    parametersList.add("Parameter Name = " + tempNode.getNodeName() + "  ( This is a user-defined type which contains the following )");
+                    parametersList.add("[START]");
+                    parametersList.add("");
+                } 
+
+                // loop again if has child nodes
+                if (tempNode.hasChildNodes())
+                    populateTheParameterListVariableWithTheNodesValue(tempNode.getChildNodes());
+
+                //GET THE VALUES ONLY IF THE CURRENT NODE IS NOT A PARENT
+                // IN CASE IT IS NOT A PARENT, THE NAME OF THE FIRST CHILD WILL ALWAYS RETURN "#text" 
+                // THE "#text" VALUE COMES FROM THE XML SPECIFICATION)
+                if ( tempNode.getFirstChild().getNodeName().equals("#text") ){
+                    parametersList.add("Parameter Name = " + tempNode.getNodeName());
+                    parametersList.add("Parameter Value = " + tempNode.getFirstChild().getTextContent());
+                    parametersList.add("");
+                }      
+                else{
+                    //the user-defined type 
+                    parametersList.add("[END]");
+                    parametersList.add("");
+                }                 
+            }
+        }   
+    
+    }
+    
+    
+    private void populateTheResponseValueListVariableWithTheNodesValue(NodeList nodeList) {
+        //https://www.mkyong.com/java/how-to-read-xml-file-in-java-dom-parser/
+        
+        for (int count = 0; count < nodeList.getLength(); count++) {
+
+            Node tempNode = nodeList.item(count);
+
+            // make sure it's element node.
+            if (tempNode.getNodeType() == Node.ELEMENT_NODE) {  
+                // loop again if has child nodes
+                if (tempNode.hasChildNodes())
+                    populateTheResponseValueListVariableWithTheNodesValue(tempNode.getChildNodes());
+
+                //GET THE VALUES ONLY IF THE CURRENT NODE IS NOT A PARENT
+                // IN CASE IT IS NOT A PARENT, THE NAME OF THE FIRST CHILD WILL ALWAYS RETURN "#text" 
+                // THE "#text" VALUE COMES FROM THE XML SPECIFICATION)
+                if ( tempNode.getFirstChild().getNodeName().equals("#text") ){
+
+                    if (!tempNode.getNodeName().equals("return")){
+                        if (!hasResponseMultipleValues){
+                            hasResponseMultipleValues = true;
+                            responseValueList.add("The response includes multiple values:");
+                            responseValueList.add("");
+                        }
+                        responseValueList.add("Parameter Name = " + tempNode.getNodeName());
+                        responseValueList.add("Parameter Value = " + tempNode.getFirstChild().getTextContent());
+                        responseValueList.add("");
+                    }
+                    else
+                        responseValueList.add("Returned Value = " + tempNode.getFirstChild().getTextContent() + "\n");                        
+                }            
+            }
+        }   
+    
+    }
+        
+    
+    public ArrayList<String> getListOfInvokedMethodsDetails(String clientDirectoryPath, ArrayList<String> listOfInvokedMethodsNames){
+        ArrayList<String> details = new ArrayList();
+        
+        try{            
+            File file = new File(clientDirectoryPath + "\\traced-soap-traffic.txt");   
+            BufferedReader br = new BufferedReader(new FileReader(file)); 
+            String line;              
+            
+            boolean isTheRequestSection = false;
+            boolean isTheResponseSection = false;
+            
+            while (( line = br.readLine()) != null) {              
+                if ( line.contains("SOAPAction:")){
+                    isTheRequestSection = true;
+                    for (String method : listOfInvokedMethodsNames){
+                        if (line.contains(method)){   
+                            details.add("Method Name - " + method);
+                            break;
+                        }
+                    }
+                }
+                else if (isTheRequestSection){                    
+                    if ( line.contains("<S:Envelope")){
+                        int index1=line.indexOf("<S:Envelope");                        
+                        isTheRequestSection = false;
+                        int index2=line.indexOf("</S:Envelope>");
+                        String envelope = "</S:Envelope>";
+                        
+                        String soapEnvelope = line.substring(index1, (index2 + envelope.length()));
+                        
+                        NodeList list = getSoapBodyFirstChildNodes(soapEnvelope);
+                        
+                        parametersList = new ArrayList();
+                        populateTheParameterListVariableWithTheNodesValue(list);
+                        
+                        for ( String parameter : parametersList)
+                            details.add(parameter);                        
+                    }
+                }
+                else if ( line.contains("---[HTTP response")){
+                    isTheResponseSection = true;                    
+                }
+                else if (isTheResponseSection) {
+                    if ( line.contains("<S:Envelope")){
+                        int index1=line.indexOf("<S:Envelope");                        
+                        isTheResponseSection = false;
+                        int index2=line.indexOf("</S:Envelope>");
+                        String envelope = "</S:Envelope>";      
+                        
+                        String soapEnvelope = line.substring(index1, (index2 + envelope.length()));    
+                        
+                        NodeList list = getSoapBodyFirstChildNodes(soapEnvelope);
+
+                        responseValueList = new ArrayList();
+                        responseValueList.add("Server:");
+                        hasResponseMultipleValues = false;
+                        populateTheResponseValueListVariableWithTheNodesValue(list);
+                        
+                        for ( String response : responseValueList)
+                            details.add(response);                        
+                    }
+                }
+            }  
+            br.close();
+        }
+        catch(Exception e){
+            log += e.getMessage();
+            createLogFile();
+        }
+        return details;
+    }
     
     public boolean didServerCommunicatedWithClient(String clientDirectoryPath, String serverDirectoryPath){
         try{
@@ -501,4 +692,5 @@ public class Assistant {
         }
         return false;
     }
+    
 }
