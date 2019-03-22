@@ -119,7 +119,7 @@ public class Validator {
                 ArrayList<String> listOfInvokedMethodsNames = assistant.getListOfInvokedMethodsNames(pathProjectBeingTested, serverMethodsList);                
                 assistant.addResponse("[INFO] Client has invoked " + listOfInvokedMethodsNames.size() + " out of " + serverMethodsList.size() + " methods\n\n");
                 
-                
+                assistant.addResponse (userTemporaryDirectoryPath);
                 ArrayList<String> detailsList = assistant.getListOfInvokedMethodsDetails(pathProjectBeingTested, listOfInvokedMethodsNames);
                 if ( !detailsList.isEmpty()){
                     assistant.addResponse("[INFO] Methods invoked by the Client:");

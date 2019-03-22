@@ -21,6 +21,8 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import javax.activation.DataHandler;
@@ -44,16 +46,17 @@ public class Assistant {
     private static String currentWorkingDirectory, tempDirectoryPath, logDirectoryPath, log, antDirectoryPath;
     private ArrayList<TestResult> resultList;  
     private static Assistant singleInstance = null;
-    private ArrayList<String> response;
+    private ArrayList<String> response, parametersList, responseValueList;
     private boolean hasResponseMultipleValues = false;
-    private ArrayList<String> parametersList = new ArrayList();
-    private ArrayList<String> responseValueList = new ArrayList();
 
     private Assistant(){
         currentWorkingDirectory = System.getProperty("user.dir") + "\\src\\main\\java\\com\\clieser";
         tempDirectoryPath = currentWorkingDirectory + "\\Temp";
         logDirectoryPath = currentWorkingDirectory + "\\Logs";
         antDirectoryPath = "C:\\ant\\bin";
+        hasResponseMultipleValues = false;
+        parametersList = new ArrayList();
+        responseValueList = new ArrayList();
     }
     
     public static Assistant getInstance(){
@@ -412,7 +415,6 @@ public class Assistant {
     }
     
     
-    
     public ArrayList<String> getMethodsAvailableOnServer(String clientDirectoryPath){
         String[] directories = getSubdirectories(clientDirectoryPath + "\\xml-resources\\web-service-references");
         String serviceName = directories[0];
@@ -428,18 +430,12 @@ public class Assistant {
        return directories[0];
     }    
     
-    public String getServiceNamexx(String wsdlFile) {        
-        try{
-            Document d = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(new FileInputStream(wsdlFile));
-            NodeList elements = d.getElementsByTagName("service");            
-            return elements.item(0).getAttributes().getNamedItem("name").getNodeValue();          
-        }
-        catch(Exception e){
-            log += e.getMessage();
-            createLogFile();
-        }
-        return null;
-    }    
+    private static boolean doesContainExactWord(String source, String wordTofind){
+         String pattern = ".*"+wordTofind+".*";
+         Pattern p=Pattern.compile(pattern);
+         Matcher m=p.matcher(source);
+         return m.matches();
+    }
     
     public ArrayList<String> getListOfInvokedMethodsNames(String clientDirectoryPath, ArrayList<String> serverMethodsList){      
         ArrayList<String> invokedMethodsNameList = new ArrayList();
@@ -451,8 +447,8 @@ public class Assistant {
             boolean foundDuplicate = false;
             while (( line = br.readLine()) != null) {              
                 if ( line.contains("SOAPAction:")){
-                    for (String method : serverMethodsList){
-                        if (line.contains(method)){
+                    for (String method : serverMethodsList){                        
+                        if (doesContainExactWord(line, method+"Request")){
                             if ( invokedMethodsNameList.isEmpty())
                                 invokedMethodsNameList.add(method);
                             else{
@@ -471,7 +467,7 @@ public class Assistant {
                     }
                 }
             }  
-            br.close();
+            br.close();            
         }
         catch(Exception e){
             log += e.getMessage();
@@ -503,7 +499,6 @@ public class Assistant {
     
     
     private void populateTheParameterListVariableWithTheNodesValue(NodeList nodeList) {
-        //https://www.mkyong.com/java/how-to-read-xml-file-in-java-dom-parser/
         for (int count = 0; count < nodeList.getLength(); count++) {
             Node tempNode = nodeList.item(count);
 
@@ -543,9 +538,7 @@ public class Assistant {
     }
     
     
-    private void populateTheResponseValueListVariableWithTheNodesValue(NodeList nodeList) {
-        //https://www.mkyong.com/java/how-to-read-xml-file-in-java-dom-parser/
-        
+    private void populateTheResponseValueListVariableWithTheNodesValue(NodeList nodeList) {        
         for (int count = 0; count < nodeList.getLength(); count++) {
 
             Node tempNode = nodeList.item(count);
@@ -575,10 +568,8 @@ public class Assistant {
                         responseValueList.add("Returned Value = " + tempNode.getFirstChild().getTextContent() + "\n");                        
                 }            
             }
-        }   
-    
-    }
-        
+        }       
+    }        
     
     public ArrayList<String> getListOfInvokedMethodsDetails(String clientDirectoryPath, ArrayList<String> listOfInvokedMethodsNames){
         ArrayList<String> details = new ArrayList();
@@ -595,7 +586,7 @@ public class Assistant {
                 if ( line.contains("SOAPAction:")){
                     isTheRequestSection = true;
                     for (String method : listOfInvokedMethodsNames){
-                        if (line.contains(method)){   
+                        if (doesContainExactWord(line, method+"Request")){
                             details.add("Method Name - " + method);
                             break;
                         }
@@ -603,13 +594,13 @@ public class Assistant {
                 }
                 else if (isTheRequestSection){                    
                     if ( line.contains("<S:Envelope")){
-                        int index1=line.indexOf("<S:Envelope");                        
                         isTheRequestSection = false;
+                        
+                        int index1=line.indexOf("<S:Envelope"); 
                         int index2=line.indexOf("</S:Envelope>");
                         String envelope = "</S:Envelope>";
                         
-                        String soapEnvelope = line.substring(index1, (index2 + envelope.length()));
-                        
+                        String soapEnvelope = line.substring(index1, (index2 + envelope.length()));                        
                         NodeList list = getSoapBodyFirstChildNodes(soapEnvelope);
                         
                         parametersList = new ArrayList();
@@ -624,13 +615,13 @@ public class Assistant {
                 }
                 else if (isTheResponseSection) {
                     if ( line.contains("<S:Envelope")){
-                        int index1=line.indexOf("<S:Envelope");                        
                         isTheResponseSection = false;
+                        
+                        int index1=line.indexOf("<S:Envelope");   
                         int index2=line.indexOf("</S:Envelope>");
                         String envelope = "</S:Envelope>";      
                         
-                        String soapEnvelope = line.substring(index1, (index2 + envelope.length()));    
-                        
+                        String soapEnvelope = line.substring(index1, (index2 + envelope.length()));                            
                         NodeList list = getSoapBodyFirstChildNodes(soapEnvelope);
 
                         responseValueList = new ArrayList();
@@ -691,6 +682,5 @@ public class Assistant {
             createLogFile();
         }
         return false;
-    }
-    
+    }   
 }
