@@ -557,7 +557,7 @@ public class Assistant {
                     if (!tempNode.getNodeName().equals("return")){
                         if (!hasResponseMultipleValues){
                             hasResponseMultipleValues = true;
-                            responseValueList.add("The response includes multiple values:");
+                            responseValueList.add("The Server response includes multiple values:");
                             responseValueList.add("");
                         }
                         responseValueList.add("Parameter Name = " + tempNode.getNodeName());
@@ -565,7 +565,7 @@ public class Assistant {
                         responseValueList.add("");
                     }
                     else
-                        responseValueList.add("Returned Value = " + tempNode.getFirstChild().getTextContent() + "\n");                        
+                        responseValueList.add("Server Returned Value = " + tempNode.getFirstChild().getTextContent() + "\n");                        
                 }            
             }
         }       
@@ -625,7 +625,7 @@ public class Assistant {
                         NodeList list = getSoapBodyFirstChildNodes(soapEnvelope);
 
                         responseValueList = new ArrayList();
-                        responseValueList.add("Server:");
+                        //responseValueList.add("Server:");
                         hasResponseMultipleValues = false;
                         populateTheResponseValueListVariableWithTheNodesValue(list);
                         
