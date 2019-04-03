@@ -108,7 +108,7 @@ public class Assistant {
     public Reply terminateTest(String userTemporaryDirectoryPath) {   
         response.add("[INFO] Test has finished\n\n");       
         System.gc();
-        delete(new File(userTemporaryDirectoryPath));    
+        //delete(new File(userTemporaryDirectoryPath));    
         createLogFile();
         return new Reply(response, resultList);
     }
@@ -200,6 +200,32 @@ public class Assistant {
         return false;        
     }         
     
+    public String getClientEntryPoint(String clientDirectoryPath){
+        //  I DON'T WANT TO DO THIS!!!!!!!!! IT WILL BE SO MUCH PAINFULL!!!!
+        String[] directories = getSubdirectories(clientDirectoryPath+ "/build/classes");        
+  
+        for (String directory : directories){            
+            if (directory.equals("META-INF"))                
+                continue;          
+            if (new File(clientDirectoryPath +"/build/classes/" +  directory + "/ObjectFactory.class").exists())
+                continue; // This means this directory contains the client stubs
+            
+            // AT THIS POINT I'M FINALLY AT THE CLIENT DIRECTORY
+            // NOW I HAVE TO SEARCH FOR .CLASS
+            getFile();
+            
+        }
+        
+        return "";
+    }
+    
+    public String getFile(){
+        
+        
+        return "";
+    }
+    
+    
     public void undeplopyServer(String serverDirectoryPath, String userTemporaryDirectoryPath){
         try{
             //ANT RUN-DEPLOY
@@ -286,15 +312,25 @@ public class Assistant {
     	}
     }    
     
+    public String[] getFilesInCurrentDirectory(String parentDirectoryPath){
+        File file = new File(parentDirectoryPath);
+        return file.list(new FilenameFilter() {
+          @Override
+          public boolean accept(File current, String name) {
+            return new File(current, name).isFile();
+          }
+        });
+        
+    }
+    
     public String[] getSubdirectories(String parentDirectoryPath){
         File file = new File(parentDirectoryPath);
-        String[] directories = file.list(new FilenameFilter() {
+        return file.list(new FilenameFilter() {
           @Override
           public boolean accept(File current, String name) {
             return new File(current, name).isDirectory();
           }
         });
-        return directories;
     }
     
     public String getClientProjectPath(String unzipLocation, String entryPoint){      
@@ -512,7 +548,7 @@ public class Assistant {
                     //the user-defined type 
                     parametersList.add("Parameter Name = " + tempNode.getNodeName() + "  ( This is a user-defined type which contains the following )");
                     parametersList.add("[START]");
-                    parametersList.add("");
+                    parametersList.add("\n");
                 } 
 
                 // loop again if has child nodes
@@ -525,12 +561,12 @@ public class Assistant {
                 if ( tempNode.getFirstChild().getNodeName().equals("#text") ){
                     parametersList.add("Parameter Name = " + tempNode.getNodeName());
                     parametersList.add("Parameter Value = " + tempNode.getFirstChild().getTextContent());
-                    parametersList.add("");
+                    parametersList.add("\n");
                 }      
                 else{
                     //the user-defined type 
                     parametersList.add("[END]");
-                    parametersList.add("");
+                    parametersList.add("\n");
                 }                 
             }
         }   
@@ -552,21 +588,28 @@ public class Assistant {
                 //GET THE VALUES ONLY IF THE CURRENT NODE IS NOT A PARENT
                 // IN CASE IT IS NOT A PARENT, THE NAME OF THE FIRST CHILD WILL ALWAYS RETURN "#text" 
                 // THE "#text" VALUE COMES FROM THE XML SPECIFICATION)
-                if ( tempNode.getFirstChild().getNodeName().equals("#text") ){
+                try{
+                    if ( tempNode.getFirstChild().getNodeName().equals("#text") ){
 
-                    if (!tempNode.getNodeName().equals("return")){
-                        if (!hasResponseMultipleValues){
-                            hasResponseMultipleValues = true;
-                            responseValueList.add("The Server response includes multiple values:");
-                            responseValueList.add("");
+                        if (!tempNode.getNodeName().equals("return")){
+                            if (!hasResponseMultipleValues){
+                                hasResponseMultipleValues = true;
+                                responseValueList.add("The Server response includes multiple values:");
+                                responseValueList.add("\n");
+                            }
+                            responseValueList.add("Parameter Name = " + tempNode.getNodeName());
+                            responseValueList.add("Parameter Value = " + tempNode.getFirstChild().getTextContent());
+                            responseValueList.add("\n");
                         }
-                        responseValueList.add("Parameter Name = " + tempNode.getNodeName());
-                        responseValueList.add("Parameter Value = " + tempNode.getFirstChild().getTextContent());
-                        responseValueList.add("");
-                    }
-                    else
-                        responseValueList.add("Server Returned Value = " + tempNode.getFirstChild().getTextContent() + "\n");                        
-                }            
+                        else
+                            responseValueList.add("Server Returned Value = " + tempNode.getFirstChild().getTextContent() + "\n");                        
+                    }  
+                }
+                catch(Exception e){
+                    //The execption means that the server has returned an exception as response
+                    log += e.getMessage();
+                    createLogFile();
+                }
             }
         }       
     }        
@@ -587,6 +630,7 @@ public class Assistant {
                     isTheRequestSection = true;
                     for (String method : listOfInvokedMethodsNames){
                         if (doesContainExactWord(line, method+"Request")){
+                            details.add("\n");
                             details.add("Method Name - " + method);
                             break;
                         }

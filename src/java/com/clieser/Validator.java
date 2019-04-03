@@ -80,6 +80,8 @@ public class Validator {
                 assistant.addResponse("[INFO] System is searching for the main class of the Client\n\n");                               
                 assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client is correctly connected to the server","true"));
                 
+                assistant.getClientEntryPoint(pathProjectBeingTested);
+                
                 String entryPoint = clientEntryPoint.replace('.', '\\');
                 if(!Files.exists(Paths.get(pathProjectBeingTested + "\\build\\classes\\" + entryPoint + ".class"))){
                     assistant.addResponse("[INFO] System did not find the main class of the Client\n\n");
