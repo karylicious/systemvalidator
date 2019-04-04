@@ -15,8 +15,68 @@ import javax.activation.DataHandler;
  * @author Carla Augusto
  */
 @WebService(portName = "ValidatorPort", serviceName = "Validator")
-public class Validator {       
-                
+public class Validator {  
+    
+    @WebMethod(operationName = "deployServer")
+    public String deployServer (DataHandler selectedFile, String selectedFileName){
+        
+        Assistant assistant = Assistant.getInstance();
+        assistant.initilizeGlobalVariables();
+        String projectName = "";
+        
+        try{
+            assistant.createLogAndTemporaryDirectories();  
+            String exercisesDirectoryPath = assistant.getTempDirectoryPath()  + "\\exercises";                     
+            
+            String userTemporaryDirectoryPath = assistant.getTempDirectoryPath() + "\\" + new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
+            assistant.createDirectory(userTemporaryDirectoryPath);
+            
+            assistant.uploadFile(selectedFile, selectedFileName, userTemporaryDirectoryPath);             
+            String zipFilePath = userTemporaryDirectoryPath + "\\" + selectedFileName;
+            
+            ArrayList<String> project = assistant.unzipAndGetTheProjectsToBeTested(zipFilePath, exercisesDirectoryPath);          
+            projectName = project.get(0); 
+            
+            String serverDirectoryPath = exercisesDirectoryPath + "\\" + projectName;         
+            assistant.createLogFile();
+            
+            boolean isServerDeployed = assistant.hasServerBeenDeployed(serverDirectoryPath, userTemporaryDirectoryPath);
+            assistant.deleteDirectory(new File(userTemporaryDirectoryPath));
+            
+            if(!isServerDeployed){
+                assistant.deleteDirectory(new File(serverDirectoryPath));
+                return "";
+            }
+        }
+        catch(Exception e){
+            assistant.addLog( e.toString());
+            assistant.createLogFile();
+        }   
+        return projectName;
+    }
+      
+    @WebMethod(operationName = "undeployServer")
+    public boolean undeployServer (String serverDirectoryName){
+        Assistant assistant = Assistant.getInstance();
+        assistant.initilizeGlobalVariables();
+        
+        String exercisesDirectoryPath = assistant.getTempDirectoryPath()  + "\\exercises"; 
+        String serverDirectoryPath = exercisesDirectoryPath + "\\" + serverDirectoryName;
+        String userTemporaryDirectoryPath = assistant.getTempDirectoryPath() + "\\" + new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
+        
+        try{
+            assistant.createDirectory(userTemporaryDirectoryPath);
+            assistant.undeplopyServer(serverDirectoryPath, userTemporaryDirectoryPath);
+            assistant.deleteDirectory(new File(userTemporaryDirectoryPath));
+            assistant.deleteDirectory(new File(serverDirectoryPath));
+        }
+        catch(Exception e){
+            assistant.addLog( e.getMessage());
+            assistant.createLogFile();
+        }  
+        return true;
+    }
+    
     @WebMethod(operationName = "testClient")
     public Reply testClient(String clientEntryPoint, DataHandler selectedFile, String selectedFileName){
         //Assuming that the Server is already running...

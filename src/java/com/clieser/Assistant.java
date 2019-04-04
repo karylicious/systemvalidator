@@ -106,9 +106,8 @@ public class Assistant {
     }   
             
     public Reply terminateTest(String userTemporaryDirectoryPath) {   
-        response.add("[INFO] Test has finished\n\n");       
-        System.gc();
-        //delete(new File(userTemporaryDirectoryPath));    
+        response.add("[INFO] Test has finished\n\n");  
+        deleteDirectory(new File(userTemporaryDirectoryPath));    
         createLogFile();
         return new Reply(response, resultList);
     }
@@ -286,7 +285,10 @@ public class Assistant {
         }               
         return true;        
     }         
-       
+    public void deleteDirectory(File directory){
+        System.gc();
+        delete(directory);
+    }   
     public void delete(File file){        
     	if(file.isDirectory()){ 
             //directory is empty, then delete it
