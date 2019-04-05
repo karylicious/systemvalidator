@@ -383,6 +383,12 @@ public class Assistant {
             
             if (name.endsWith("/")) {
                 if(!foundFirstDirectoryInTheZipFile){
+                    
+                    if (file.exists()){ // This means that there is already a web service with the same name as the one on the zip file
+                        zipFile.close(); 
+                        return listOfProjectsToBeTested;
+                    }
+                    
                     foundFirstDirectoryInTheZipFile = true;    
                     listOfProjectsToBeTested.add(name);
                 }

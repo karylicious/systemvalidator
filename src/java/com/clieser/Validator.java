@@ -23,34 +23,39 @@ public class Validator {
         Assistant assistant = Assistant.getInstance();
         assistant.initilizeGlobalVariables();
         String projectName = "";
+        String userTemporaryDirectoryPath = "";
         
         try{
             assistant.createLogAndTemporaryDirectories();  
             String exercisesDirectoryPath = assistant.getTempDirectoryPath()  + "\\exercises";                     
             
-            String userTemporaryDirectoryPath = assistant.getTempDirectoryPath() + "\\" + new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
+            userTemporaryDirectoryPath = assistant.getTempDirectoryPath() + "\\" + new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
             assistant.createDirectory(userTemporaryDirectoryPath);
             
             assistant.uploadFile(selectedFile, selectedFileName, userTemporaryDirectoryPath);             
             String zipFilePath = userTemporaryDirectoryPath + "\\" + selectedFileName;
             
-            ArrayList<String> project = assistant.unzipAndGetTheProjectsToBeTested(zipFilePath, exercisesDirectoryPath);          
-            projectName = project.get(0); 
+            ArrayList<String> project = assistant.unzipAndGetTheProjectsToBeTested(zipFilePath, exercisesDirectoryPath);      
+            if(project.isEmpty()){
+                assistant.deleteDirectory(new File(userTemporaryDirectoryPath));
+                return "There is already a deployed web service with the same name as the one on the zip file! Please try again with a different name.";
+            }
             
-            String serverDirectoryPath = exercisesDirectoryPath + "\\" + projectName;         
-            assistant.createLogFile();
+            projectName = project.get(0);
+            String serverDirectoryPath = exercisesDirectoryPath + "\\" + projectName;
             
             boolean isServerDeployed = assistant.hasServerBeenDeployed(serverDirectoryPath, userTemporaryDirectoryPath);
             assistant.deleteDirectory(new File(userTemporaryDirectoryPath));
             
             if(!isServerDeployed){
                 assistant.deleteDirectory(new File(serverDirectoryPath));
-                return "";
+                return "The build directory has not been found on your web service! Please before trying to deploy the web service in this system, make sure you have deployed it using NetBeans IDE at least once.";
             }
         }
         catch(Exception e){
             assistant.addLog( e.toString());
             assistant.createLogFile();
+            assistant.deleteDirectory(new File(userTemporaryDirectoryPath));
         }   
         return projectName;
     }
@@ -71,8 +76,9 @@ public class Validator {
             assistant.deleteDirectory(new File(serverDirectoryPath));
         }
         catch(Exception e){
-            assistant.addLog( e.getMessage());
+            assistant.addLog( e.toString());
             assistant.createLogFile();
+            return false;
         }  
         return true;
     }
