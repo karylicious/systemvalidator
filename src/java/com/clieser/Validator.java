@@ -48,8 +48,14 @@ public class Validator {
             assistant.deleteDirectory(new File(userTemporaryDirectoryPath));
             
             if(!isServerDeployed){
-                assistant.deleteDirectory(new File(serverDirectoryPath));
-                return "The build directory has not been found on your web service! Please before trying to deploy the web service in this system, make sure you have deployed it using NetBeans IDE at least once.";
+                String information;
+                if ( !new File(serverDirectoryPath + "\\build").exists() )                    
+                    information = "The build directory has not been found on your web service! Please before trying to deploy the web service in this system, make sure you have deployed it using NetBeans IDE at least once.";
+                else
+                    information = "The uploaded project is not a web service! Please upload a valid web service and try again.";
+                
+                assistant.deleteDirectory(new File(serverDirectoryPath));    
+                return information;
             }
         }
         catch(Exception e){
