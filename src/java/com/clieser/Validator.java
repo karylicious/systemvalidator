@@ -31,8 +31,13 @@ public class Validator {
             
             userTemporaryDirectoryPath = assistant.getTempDirectoryPath() + "\\" + new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
             assistant.createDirectory(userTemporaryDirectoryPath);
+           
+            //assistant.addLog("Seelcy  " + selectedFileName);
             
-            assistant.uploadFile(selectedFile, selectedFileName, userTemporaryDirectoryPath);             
+            //assistant.createLogFile();
+            assistant.uploadFile(selectedFile, selectedFileName, userTemporaryDirectoryPath);    
+            
+      
             String zipFilePath = userTemporaryDirectoryPath + "\\" + selectedFileName;
             
             ArrayList<String> project = assistant.unzipAndGetTheProjectsToBeTested(zipFilePath, exercisesDirectoryPath);      
@@ -78,8 +83,8 @@ public class Validator {
         try{
             assistant.createDirectory(userTemporaryDirectoryPath);
             assistant.undeplopyServer(serverDirectoryPath, userTemporaryDirectoryPath);
-            assistant.deleteDirectory(new File(userTemporaryDirectoryPath));
-            assistant.deleteDirectory(new File(serverDirectoryPath));
+            assistant.deleteDirectory(new File(userTemporaryDirectoryPath)); //remove comment
+            assistant.deleteDirectory(new File(serverDirectoryPath)); //remove comment
         }
         catch(Exception e){
             assistant.addLog( e.toString());
@@ -207,7 +212,7 @@ public class Validator {
             }
         }
         catch(Exception e){
-            assistant.addLog( e.getMessage());
+            assistant.addLog( e.toString());
             assistant.createLogFile();
         }     
         return assistant.terminateTest(userTemporaryDirectoryPath);
@@ -387,7 +392,7 @@ public class Validator {
             }
         }
         catch(Exception e){ 
-            assistant.addLog(e.getMessage());
+            assistant.addLog(e.toString());
             assistant.createLogFile();
         }              
         return assistant.terminateTest(userTemporaryDirectoryPath);

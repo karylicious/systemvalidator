@@ -193,7 +193,7 @@ public class Assistant {
             return foundApp;
         }
         catch(Exception e){            
-            log += e.getMessage();
+            log += e.toString();
             createLogFile();
         }               
         return false;        
@@ -239,7 +239,7 @@ public class Assistant {
             Thread.currentThread().sleep(3000l);
         }
         catch(Exception e){            
-            log += e.getMessage();
+            log += e.toString();
             createLogFile();
         }   
     }
@@ -279,7 +279,7 @@ public class Assistant {
             br.close();
         }
         catch(Exception e){            
-            log += e.getMessage();
+            log += e.toString();
             createLogFile();
             return false;
         }               
@@ -451,7 +451,7 @@ public class Assistant {
             }        
         }
         catch(Exception e){
-            log += e.getMessage();
+            log += e.toString();
             createLogFile();
         }
         return list;
@@ -513,7 +513,7 @@ public class Assistant {
             br.close();            
         }
         catch(Exception e){
-            log += e.getMessage();
+            log += e.toString();
             createLogFile();
         }
         return invokedMethodsNameList;
@@ -614,7 +614,7 @@ public class Assistant {
                 }
                 catch(Exception e){
                     //The execption means that the server has returned an exception as response
-                    log += e.getMessage();
+                    log += e.toString();
                     createLogFile();
                 }
             }
@@ -688,7 +688,7 @@ public class Assistant {
             br.close();
         }
         catch(Exception e){
-            log += e.getMessage();
+            log += e.toString();
             createLogFile();
         }
         return details;
@@ -711,7 +711,7 @@ public class Assistant {
             }  
         }
         catch(Exception e){
-            log += e.getMessage();
+            log += e.toString();
             createLogFile();
         }
         return false;
@@ -729,7 +729,7 @@ public class Assistant {
             }  
         }
         catch(Exception e){
-            log += e.getMessage();
+            log += e.toString();
             createLogFile();
         }
         return false;
