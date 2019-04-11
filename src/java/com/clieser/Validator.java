@@ -17,6 +17,19 @@ import javax.activation.DataHandler;
 @WebService(portName = "ValidatorPort", serviceName = "Validator")
 public class Validator {  
     
+    //@WebMethod(operationName = "gradeClientProject")
+    //public GradingOutput gradeClientProject (String clientEntryPoint, DataHandler selectedFile, String selectedFileName, ArrayList<ExerciseQuestion> exerciseQuestionList){
+                
+        //return new GradingOutput();
+    //}
+    
+    //@WebMethod(operationName = "gradeClientServerProject")
+    //public String gradeClientServerProject (DataHandler selectedFile, String selectedFileName){
+        
+        
+        
+    //}
+    
     @WebMethod(operationName = "deployServer")
     public String deployServer (DataHandler selectedFile, String selectedFileName){
         
@@ -119,8 +132,8 @@ public class Validator {
             ArrayList<String> listOfProjectsToBeTested = assistant.unzipAndGetTheProjectsToBeTested(zipFilePath, unzipLocation);            
                     
             for(int i = 0; i < listOfProjectsToBeTested.size(); i++){
-                assistant.addResponse("[INFO] Testing " + (i+1) + " out of " + listOfProjectsToBeTested.size() + " projects\n\n\n");
-                assistant.addResponse("\n\n");                
+                assistant.addTestResponse("[INFO] Testing " + (i+1) + " out of " + listOfProjectsToBeTested.size() + " projects\n\n\n");
+                assistant.addTestResponse("\n\n");                
                 
                 String NameOfTheProjectBeingTested = selectedFileName + ".zip";       
                 String[] projectName = listOfProjectsToBeTested.get(i).split(".zip");                
@@ -132,83 +145,88 @@ public class Validator {
                     
                     zipFilePath = userTemporaryDirectoryPath+ "\\"+selectedFileName +"\\"+listOfProjectsToBeTested.get(i);                  
                            
-                    //unzip inside of a new directory which as the same name as the zip file name but outside the parent directory
-                    unzipLocation = userTemporaryDirectoryPath;//               
-                                    
-                    pathProjectBeingTested = unzipLocation + "\\" + projectName[0];                     
-                    assistant.unzipAndGetTheProjectsToBeTested(zipFilePath, unzipLocation);              
-                    NameOfTheProjectBeingTested = listOfProjectsToBeTested.get(i);             
+                    //unzip inside of a new directory which as the same name as the zip file name but outside the parent directory                           
+                                         
+                    pathProjectBeingTested = userTemporaryDirectoryPath + "\\" + projectName[0];                     
+                    assistant.unzipAndGetTheProjectsToBeTested(zipFilePath, pathProjectBeingTested);  
+                    
+                    String[] subDirectories = assistant.getSubdirectories(pathProjectBeingTested);
+                    
+                     //The array will expect to have just one directory with the name 
+                    pathProjectBeingTested += "\\" +subDirectories[0];
+                    
+                    NameOfTheProjectBeingTested = listOfProjectsToBeTested.get(i); 
                 }                
                 
-                assistant.addResponse( "[INFO] Project selected: "+ NameOfTheProjectBeingTested +"\n");            
-                assistant.addResponse("[INFO] System is searching for the Client stubs\n\n");
+                assistant.addTestResponse( "[INFO] Project selected: "+ NameOfTheProjectBeingTested +"\n");            
+                assistant.addTestResponse("[INFO] System is searching for the Client stubs\n\n");
                 
                 //Whenever a new web service reference is added on the client, the wsimport command generates the stubs under the following directories
                 if ( !new File(pathProjectBeingTested + "\\build\\generated-sources\\jax-ws").exists() ){
-                    assistant.addResponse("[INFO] System did not find the Client stubs\n\n");
-                    assistant.addResponse("\n\n");
+                    assistant.addTestResponse("[INFO] System did not find the Client stubs\n\n");
+                    assistant.addTestResponse("\n\n");
                     assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client is not correctly connected to the server","false"));
                     assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client did not start","false"));                    
                     assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client did not communicate with the Server","false"));
                     continue;
                 }          
                 
-                assistant.addResponse("[INFO] System found the Client stubs\n\n");                  
-                assistant.addResponse("[INFO] System is searching for the main class of the Client\n\n");                               
+                assistant.addTestResponse("[INFO] System found the Client stubs\n\n");                  
+                assistant.addTestResponse("[INFO] System is searching for the main class of the Client\n\n");                               
                 assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client is correctly connected to the server","true"));
                 
-                assistant.getClientEntryPoint(pathProjectBeingTested);
                 
                 String entryPoint = clientEntryPoint.replace('.', '\\');
-                if(!Files.exists(Paths.get(pathProjectBeingTested + "\\build\\classes\\" + entryPoint + ".class"))){
-                    assistant.addResponse("[INFO] System did not find the main class of the Client\n\n");
-                    assistant.addResponse("\n\n");                    
+                
+                if(!Files.exists(Paths.get(pathProjectBeingTested + "\\src\\" + entryPoint + ".java"))){
+                    assistant.addTestResponse("[INFO] System did not find the main class of the Client\n\n");
+                    assistant.addTestResponse("\n\n");                    
                     assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client did not start","false"));
                     assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client did not communicate with the Server","false"));
                     continue;
                 }
                                
-                assistant.addResponse("[INFO] System found the main class of the Client\n\n");
-                assistant.addResponse("[INFO] System is trying to start the Client\n\n");                                  
+                assistant.addTestResponse("[INFO] System found the main class of the Client\n\n");
+                assistant.addTestResponse("[INFO] System is trying to start the Client\n\n");                                  
                 boolean hasClientStarted = assistant.didRunClientAndSaveOutput(clientEntryPoint, pathProjectBeingTested, userTemporaryDirectoryPath);
 
                 if(!hasClientStarted){
-                    assistant.addResponse("[INFO] Client did not start. Please check your code\n\n");
-                    assistant.addResponse("\n\n");
+                    assistant.addTestResponse("[INFO] Client did not start. Please check your code\n\n");
+                    assistant.addTestResponse("\n\n");
                     assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client did not start","false"));                    
                     assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client did not communicate with the Server","false"));
                     continue;
                 }   
 
-                assistant.addResponse("[INFO] Client has started\n\n");
-                assistant.addResponse("[INFO] System is verifying whether Client has communicated with the Server\n\n");                
+                assistant.addTestResponse("[INFO] Client has started\n\n");
+                assistant.addTestResponse("[INFO] System is verifying whether Client has communicated with the Server\n\n");                
                 assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client did start","true"));    
                 
                 if( !assistant.didClientCommunicatedWithServer(pathProjectBeingTested) ){
-                    assistant.addResponse("[INFO] Client did not communicate with the Server. Please check your code\n\n");
-                    assistant.addResponse("\n\n");                  
+                    assistant.addTestResponse("[INFO] Client did not communicate with the Server. Please check your code\n\n");
+                    assistant.addTestResponse("\n\n");                  
                     assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client did not communicate with the Server","false"));
                     continue;
                 }
                 
-                assistant.addResponse("[INFO] Client has communicated with the Server\n\n");
+                assistant.addTestResponse("[INFO] Client has communicated with the Server\n\n");
                 assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client did communicate with the Server","true"));                 
                 
                 ArrayList<String> serverMethodsList = assistant.getMethodsAvailableOnServer(pathProjectBeingTested);                
                 ArrayList<String> listOfInvokedMethodsNames = assistant.getListOfInvokedMethodsNames(pathProjectBeingTested, serverMethodsList);                
-                assistant.addResponse("[INFO] Client has invoked " + listOfInvokedMethodsNames.size() + " out of " + serverMethodsList.size() + " methods\n\n");
+                assistant.addTestResponse("[INFO] Client has invoked " + listOfInvokedMethodsNames.size() + " out of " + serverMethodsList.size() + " methods\n\n");
                                 
                 ArrayList<String> detailsList = assistant.getListOfInvokedMethodsDetails(pathProjectBeingTested, listOfInvokedMethodsNames);
                 if ( !detailsList.isEmpty()){
-                    assistant.addResponse("[INFO] Methods invoked by the Client:");
+                    assistant.addTestResponse("[INFO] Methods invoked by the Client:");
                     for (String details : detailsList) {
-                        assistant.addResponse ( details);
+                        assistant.addTestResponse ( details);
                         if (details.equals(""))
-                            assistant.addResponse("\n\n");
+                            assistant.addTestResponse("\n\n");
                     }
                     
                 }                               
-                assistant.addResponse("\n\n");
+                assistant.addTestResponse("\n\n");
             }
         }
         catch(Exception e){
@@ -241,40 +259,67 @@ public class Validator {
             
             //unzip inside of a new directory which as the same name as the zip file name
             ArrayList<String> listOfProjectsToBeTested = assistant.unzipAndGetTheProjectsToBeTested(zipFilePath, unzipLocation);      
-                       
+            //String projectName ="";           
             for(int i = 0; i < listOfProjectsToBeTested.size(); i++){
-                assistant.addResponse("[INFO] Testing " + (i+1) + " out of " + listOfProjectsToBeTested.size() + " projects\n\n\n");
-                assistant.addResponse("\n\n");
+                assistant.addTestResponse("[INFO] Testing " + (i+1) + " out of " + listOfProjectsToBeTested.size() + " projects\n\n\n");
+                assistant.addTestResponse("\n\n");
                                 
                 String NameOfTheProjectBeingTested = selectedFileName + ".zip";                       
                 String serverDirectoryPath = assistant.getServerProjectPath(unzipLocation); // Assuming that this is a Glassfish web service
                 String clientDirectoryPath = assistant.getClientProjectPath(unzipLocation, clientEntryPoint);                
                 
+                //String[] name = serverDirectoryPath.split("\\");
+                //projectName=name[1];
                  if(listOfProjectsToBeTested.size() > 1){     
                      
                     //>>>>>>>>>>>>>>>>>>  IN CASE OF MULTIPLE PROJECTS UNZIP ONE BY ONE  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                     
-                    zipFilePath = userTemporaryDirectoryPath+ "\\"+selectedFileName +"\\"+listOfProjectsToBeTested.get(i);  
+                   /* zipFilePath = userTemporaryDirectoryPath+ "\\"+selectedFileName +"\\"+listOfProjectsToBeTested.get(i);  
                     
                     //unzip inside of a new directory which as the same name as the zip file name but outside the parent directory
                     unzipLocation = userTemporaryDirectoryPath;               
                                                   
                     assistant.unzipAndGetTheProjectsToBeTested(zipFilePath, unzipLocation);              
-                    NameOfTheProjectBeingTested = listOfProjectsToBeTested.get(i);    
+                        
                     
                     serverDirectoryPath = assistant.getServerProjectPath(unzipLocation); // Assuming that this is a Glassfish web service
                     clientDirectoryPath = assistant.getClientProjectPath(unzipLocation, clientEntryPoint);
-                
+                    
+                    NameOfTheProjectBeingTested = listOfProjectsToBeTested.get(i);*/
+                    
+                    
+                    //-==============================
+                    zipFilePath = userTemporaryDirectoryPath+ "\\"+selectedFileName +"\\"+listOfProjectsToBeTested.get(i);                  
+                       
+                    String[] foundProjectName = listOfProjectsToBeTested.get(i).split(".zip");
+                    //unzip inside of a new directory which as the same name as the zip file name but outside the parent directory                           
+                                         
+                    unzipLocation = userTemporaryDirectoryPath + "\\" + foundProjectName[0];                     
+                    assistant.unzipAndGetTheProjectsToBeTested(zipFilePath, unzipLocation);  
+                    
+                    //String[] subDirectories = assistant.getSubdirectories(pathProjectBeingTested);
+                    
+                    serverDirectoryPath = assistant.getServerProjectPath(unzipLocation); // Assuming that this is a Glassfish web service
+                    clientDirectoryPath = assistant.getClientProjectPath(unzipLocation, clientEntryPoint);
+                    
+                    
+                     //The array will expect to have just one directory with the name 
+                    //pathProjectBeingTested += "\\" +subDirectories[0];
+                    
+                    NameOfTheProjectBeingTested = listOfProjectsToBeTested.get(i); 
+                    
+                    //name = serverDirectoryPath.split("\\");
+                    //projectName=name[1];
                 }                                  
-                assistant.addResponse( "[INFO] Project selected: "+ NameOfTheProjectBeingTested +"\n");   
+                assistant.addTestResponse( "[INFO] Project selected: "+ NameOfTheProjectBeingTested +"\n");   
 
                 //>>>>>>>>>>>>>>>>>>>>>>>   TESTING SERVER   <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                 
-                assistant.addResponse("[INFO] System is searching for the Server project\n\n");    
+                assistant.addTestResponse("[INFO] System is searching for the Server project\n\n");    
                 
                 if( serverDirectoryPath.isEmpty() ){
-                    assistant.addResponse("[INFO] System did not find the Server project\n\n");
-                    assistant.addResponse("\n\n");                    
+                    assistant.addTestResponse("[INFO] System did not find the Server project\n\n");
+                    assistant.addTestResponse("\n\n");                    
                     assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Server did not start","false"));                           
                     assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client is not correctly connected to the server","false"));
                     assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client did not start","false"));                    
@@ -283,12 +328,12 @@ public class Validator {
                     continue;
                 }
                 
-                assistant.addResponse("[INFO] System did find the Server project\n\n");                
-                assistant.addResponse("[INFO] System is trying to deploy the Server\n\n");  
+                assistant.addTestResponse("[INFO] System did find the Server project\n\n");                
+                assistant.addTestResponse("[INFO] System is trying to deploy the Server\n\n");  
                 
                 if ( !assistant.hasServerBeenDeployed(serverDirectoryPath, userTemporaryDirectoryPath) ){
-                    assistant.addResponse("[INFO] System did not manage to deploy the Server. Please check your code.\n\n");
-                    assistant.addResponse("\n\n");                    
+                    assistant.addTestResponse("[INFO] System did not manage to deploy the Server. Please check your code.\n\n");
+                    assistant.addTestResponse("\n\n");                    
                     assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Server did not start","false"));
                     assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client is not correctly connected to the server","false"));
                     assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client did not start","false"));
@@ -297,17 +342,18 @@ public class Validator {
                     continue;
                 }
                 
-                assistant.addResponse("[INFO] System has deployed Server\n\n");
+                assistant.addTestResponse("[INFO] System has deployed Server\n\n");
                 assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Server did start","true"));
                 
                 //>>>>>>>>>>>>>>>>>>>>>>>   TESTING CLIENT   <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                 
-                assistant.addResponse("[INFO] System is searching for the Client stubs\n\n");
+                assistant.addTestResponse("[INFO] System is searching for the Client stubs\n\n");
                 
+                assistant.addLog(clientDirectoryPath);
                 //Whenever a new web service reference is added on the client, the wsimport command generates the stubs under the following directories
                 if ( !new File(clientDirectoryPath + "\\build\\generated-sources\\jax-ws").exists() ){
-                    assistant.addResponse("[INFO] System did not find the Client stubs\n\n");
-                    assistant.addResponse("\n\n");
+                    assistant.addTestResponse("[INFO] System did not find the Client stubs\n\n");
+                    assistant.addTestResponse("\n\n");
                     assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client is not correctly connected to the server","false"));
                     assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client did not start","false"));                    
                     assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client did not communicate with the Server","false"));
@@ -315,80 +361,80 @@ public class Validator {
                     continue;
                 }          
                 
-                assistant.addResponse("[INFO] System found the Client stubs\n\n");                        
-                assistant.addResponse("[INFO] System is searching for the main class of the Client\n\n");                
+                assistant.addTestResponse("[INFO] System found the Client stubs\n\n");                        
+                assistant.addTestResponse("[INFO] System is searching for the main class of the Client\n\n");                
                 assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client is correctly connected to the server","true"));
                 
                 String entryPoint = clientEntryPoint.replace('.', '\\');
                 if(!Files.exists(Paths.get(clientDirectoryPath + "\\build\\classes\\" + entryPoint + ".class"))){
-                    assistant.addResponse("[INFO] System did not find the main class of the Client\n\n");
-                    assistant.addResponse("\n\n");                    
+                    assistant.addTestResponse("[INFO] System did not find the main class of the Client\n\n");
+                    assistant.addTestResponse("\n\n");                    
                     assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client did not start","false"));
                     assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client did not communicate with the Server","false"));
                     assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Server did not communicate with the Client","false"));
                     continue;
                 }
                                
-                assistant.addResponse("[INFO] System found the main class of the Client\n\n");
-                assistant.addResponse("[INFO] System is trying to start the Client\n\n");                      
+                assistant.addTestResponse("[INFO] System found the main class of the Client\n\n");
+                assistant.addTestResponse("[INFO] System is trying to start the Client\n\n");                      
                 boolean hasClientStarted = assistant.didRunClientAndSaveOutput(clientEntryPoint, clientDirectoryPath, userTemporaryDirectoryPath);
 
                 if(!hasClientStarted){
-                    assistant.addResponse("[INFO] Client did not start. Please check your code\n\n");
-                    assistant.addResponse("\n\n");
+                    assistant.addTestResponse("[INFO] Client did not start. Please check your code\n\n");
+                    assistant.addTestResponse("\n\n");
                     assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client did not start","false"));                    
                     assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client did not communicate with the Server","false"));
                     assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Server did not communicate with the Client","false"));
                     continue;
                 }   
 
-                assistant.addResponse("[INFO] Client has started\n\n");
-                assistant.addResponse("[INFO] System is verifying whether Client has communicated with the Server\n\n"); 
+                assistant.addTestResponse("[INFO] Client has started\n\n");
+                assistant.addTestResponse("[INFO] System is verifying whether Client has communicated with the Server\n\n"); 
                 assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client did start","true"));    
                 
                 if( !assistant.didClientCommunicatedWithServer(clientDirectoryPath) ){
-                    assistant.addResponse("[INFO] Client did not communicate with the Server. Please check your code\n\n");
-                    assistant.addResponse("\n\n");                  
+                    assistant.addTestResponse("[INFO] Client did not communicate with the Server. Please check your code\n\n");
+                    assistant.addTestResponse("\n\n");                  
                     assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client did not communicate with the Server","false"));
                     assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Server did not communicate with the Client","false"));
                     continue;
                 }
                 
-                assistant.addResponse("[INFO] Client has communicated with the Server\n\n");
+                assistant.addTestResponse("[INFO] Client has communicated with the Server\n\n");
                 assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client did communicate with the Server","true"));                 
-                assistant.addResponse("[INFO] System is verifying whether Server has communicated with the Client\n\n"); 
+                assistant.addTestResponse("[INFO] System is verifying whether Server has communicated with the Client\n\n"); 
                 
                 if( !assistant.didServerCommunicatedWithClient(clientDirectoryPath, serverDirectoryPath) ){
-                    assistant.addResponse("[INFO] Server did not communicate with the Client. Please check your code\n\n");
-                    assistant.addResponse("\n\n");                  
+                    assistant.addTestResponse("[INFO] Server did not communicate with the Client. Please check your code\n\n");
+                    assistant.addTestResponse("\n\n");                  
                     assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Server did not communicate with the Client","false"));
                     continue;
                 }
                 
-                assistant.addResponse("[INFO] Server has communicated with the Client\n\n");
+                assistant.addTestResponse("[INFO] Server has communicated with the Client\n\n");
                 assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Server did communicate with the Client","true"));                
                                 
                 
                 assistant.undeplopyServer(serverDirectoryPath, userTemporaryDirectoryPath);                
-                assistant.addResponse("[INFO] System has undeployed Server\n\n");
+                assistant.addTestResponse("[INFO] System has undeployed Server\n\n");
                 
                 ArrayList<String> serverMethodsList = assistant.getMethodsAvailableOnServer(clientDirectoryPath);   
                 ArrayList<String> listOfInvokedMethodsNames = assistant.getListOfInvokedMethodsNames(clientDirectoryPath, serverMethodsList);                
-                assistant.addResponse("[INFO] Client has invoked " + listOfInvokedMethodsNames.size() + " out of " + serverMethodsList.size() + " methods\n\n");                
+                assistant.addTestResponse("[INFO] Client has invoked " + listOfInvokedMethodsNames.size() + " out of " + serverMethodsList.size() + " methods\n\n");                
                 
                 
                 
                 ArrayList<String> detailsList = assistant.getListOfInvokedMethodsDetails(clientDirectoryPath, listOfInvokedMethodsNames);
                 if ( !detailsList.isEmpty()){
-                    assistant.addResponse("[INFO] Methods invoked by the Client:");
+                    assistant.addTestResponse("[INFO] Methods invoked by the Client:");
                     for (String detail : detailsList) {
-                        assistant.addResponse ( detail);
+                        assistant.addTestResponse ( detail);
                         if (detail.equals(""))
-                            assistant.addResponse("\n");
+                            assistant.addTestResponse("\n");
                     }
                     
                 }                               
-                assistant.addResponse("\n\n");
+                assistant.addTestResponse("\n\n");
             }
         }
         catch(Exception e){ 

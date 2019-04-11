@@ -45,8 +45,11 @@ import org.w3c.dom.NodeList;
 public class Assistant {
     private static String currentWorkingDirectory, tempDirectoryPath, logDirectoryPath, log, antDirectoryPath;
     private ArrayList<TestResult> resultList;  
+    //private ArrayList<String> gradeResponseList;
+    private ArrayList<Grading> gradingList;
+    private ArrayList<ExerciseQuestionList> exerciseQuestionList;
     private static Assistant singleInstance = null;
-    private ArrayList<String> response, parametersList, responseValueList;
+    private ArrayList<String> testResponseList, parametersList, testResponseValue, gradingResponseList;
     private boolean hasResponseMultipleValues = false;
 
     private Assistant(){
@@ -56,7 +59,8 @@ public class Assistant {
         antDirectoryPath = "C:\\ant\\bin";
         hasResponseMultipleValues = false;
         parametersList = new ArrayList();
-        responseValueList = new ArrayList();
+        //testResponseValueList = new ArrayList();
+        //gradeResponseList = new ArrayList();
     }
     
     public static Assistant getInstance(){
@@ -65,7 +69,9 @@ public class Assistant {
         return singleInstance;
     }        
     
-    public void addResponse(String text){ response.add(text); }
+    public void addGradingResponse(String text){ gradingResponseList.add(text); }
+    
+    public void addTestResponse(String text){ testResponseList.add(text); }
     
     public void addLog(Object text){ log += text; }                        
         
@@ -106,10 +112,10 @@ public class Assistant {
     }   
             
     public Reply terminateTest(String userTemporaryDirectoryPath) {   
-        response.add("[INFO] Test has finished\n\n");  
-        deleteDirectory(new File(userTemporaryDirectoryPath));    
+        testResponseList.add("[INFO] Test has finished\n\n");  
+        //deleteDirectory(new File(userTemporaryDirectoryPath));    
         createLogFile();
-        return new Reply(response, resultList);
+        return new Reply(testResponseList, resultList);
     }
     
     public void uploadFile(DataHandler selectedFile, String fileName, String uploadLocation) throws IOException {               
@@ -136,13 +142,16 @@ public class Assistant {
     }        
          
     public boolean hasServerBeenDeployed(String serverDirectoryPath, String userTemporaryDirectoryPath){   
-        try{                         
+        try{         
+            File file = new File(serverDirectoryPath);
+            String projectName = file.getName();
+            
             //ANT BUILD
             ArrayList<String> commandsList = new ArrayList();
             commandsList.add("cd " + antDirectoryPath);
-            commandsList.add("ant -f " + serverDirectoryPath);
+            commandsList.add("ant -Dlibs.CopyLibs.classpath=\"C:\\Program Files\\NetBeans 8.2\\java\\ant\\extra\\org-netbeans-modules-java-j2seproject-copylibstask\" -f " + serverDirectoryPath);
             
-            String antBuildShFile = userTemporaryDirectoryPath + "\\antbuild.bat";
+            String antBuildShFile = userTemporaryDirectoryPath + "\\antbuild-"+new SimpleDateFormat("yyyyMMddHHmmss").format(new Date())+".bat";
             createNewShFile(antBuildShFile, commandsList);
 
             Process process1 = Runtime.getRuntime().exec("cmd /c "+antBuildShFile);          
@@ -150,10 +159,13 @@ public class Assistant {
             
             //ANT RUN-DEPLOY
             commandsList = new ArrayList();
-            commandsList.add("cd " + antDirectoryPath);
-            commandsList.add("ant -f " + serverDirectoryPath + " run-deploy");
+            //commandsList.add("cd " + antDirectoryPath);
+            //commandsList.add("ant -f " + serverDirectoryPath + " run-deploy");
             
-            String antDeployShFile = userTemporaryDirectoryPath + "\\antdeploy.bat";
+            commandsList.add("cd C:\\Program Files\\glassfish-4.1.1\\bin");
+            commandsList.add("asadmin deploy "+serverDirectoryPath +"\\dist\\"+projectName+".war");
+            
+            String antDeployShFile = userTemporaryDirectoryPath + "\\antdeploy-"+new SimpleDateFormat("yyyyMMddHHmmss").format(new Date())+".bat";
             createNewShFile(antDeployShFile, commandsList);
 
             Process process2 = Runtime.getRuntime().exec("cmd /c " + antDeployShFile);  
@@ -164,7 +176,7 @@ public class Assistant {
             commandsList.add("cd C:\\Program Files\\glassfish-4.1.1\\bin");
             commandsList.add("asadmin list-applications --type web");
             
-            String deployedListdShFile = userTemporaryDirectoryPath + "\\deployedlist.bat";
+            String deployedListdShFile = userTemporaryDirectoryPath + "\\deployedlist-"+new SimpleDateFormat("yyyyMMddHHmmss").format(new Date())+".bat";
             createNewShFile(deployedListdShFile, commandsList);
             Process process3 = Runtime.getRuntime().exec("cmd /c " + deployedListdShFile);
                         
@@ -180,8 +192,8 @@ public class Assistant {
             }   
             
             br.close();
-            File file = new File(serverDirectoryPath);
-            String projectName = file.getName();
+            //File file = new File(serverDirectoryPath);
+            //String projectName = file.getName();
             boolean foundApp = false;
             
             for(String app : deployedList){
@@ -198,41 +210,20 @@ public class Assistant {
         }               
         return false;        
     }         
-    
-    public String getClientEntryPoint(String clientDirectoryPath){
-        //  I DON'T WANT TO DO THIS!!!!!!!!! IT WILL BE SO MUCH PAINFULL!!!!
-        String[] directories = getSubdirectories(clientDirectoryPath+ "/build/classes");        
-  
-        for (String directory : directories){            
-            if (directory.equals("META-INF"))                
-                continue;          
-            if (new File(clientDirectoryPath +"/build/classes/" +  directory + "/ObjectFactory.class").exists())
-                continue; // This means this directory contains the client stubs
-            
-            // AT THIS POINT I'M FINALLY AT THE CLIENT DIRECTORY
-            // NOW I HAVE TO SEARCH FOR .CLASS
-            getFile();
-            
-        }
         
-        return "";
-    }
-    
-    public String getFile(){
-        
-        
-        return "";
-    }
-    
-    
     public void undeplopyServer(String serverDirectoryPath, String userTemporaryDirectoryPath){
         try{
+            
+            File file = new File(serverDirectoryPath);
+            String projectName = file.getName();
             //ANT RUN-DEPLOY
             ArrayList<String> commandsList = new ArrayList();
-            commandsList.add("cd " + antDirectoryPath);
-            commandsList.add("ant -f " + serverDirectoryPath + " run-undeploy");
+            commandsList.add("cd C:\\Program Files\\glassfish-4.1.1\\bin");
+            commandsList.add("asadmin undeploy "+serverDirectoryPath +"\\dist\\"+projectName);
+            //commandsList.add("cd " + antDirectoryPath);
+            //commandsList.add("ant -f " + serverDirectoryPath + " run-undeploy");
             
-            String antUndeployShFile = userTemporaryDirectoryPath + "\\antundeploy.bat";
+            String antUndeployShFile = userTemporaryDirectoryPath + "\\antundeploy-"+new SimpleDateFormat("yyyyMMddHHmmss").format(new Date())+".bat";
             createNewShFile(antUndeployShFile, commandsList);
 
             Process process = Runtime.getRuntime().exec("cmd /c " + antUndeployShFile);           
@@ -248,11 +239,13 @@ public class Assistant {
         try{              
             File classesDirectory = new File(pathProjectBeingTested + "\\build\\classes");        
             ArrayList<String> commandsList = new ArrayList();
-            
+            //String entryPoint = clientEntryPoint.replace('.', '/');
             commandsList.add("cd " +  classesDirectory.getPath());
             commandsList.add("java -Dcom.sun.xml.internal.ws.transport.http.client.HttpTransportPipe.dump=true " + clientEntryPoint); 
+            //ant -f C:\\Users\\Carla-PC\\Downloads\\tutorial -Djavac.includes=tutorial/MyClient.java -Dnb.internal.action.name=run.single -Drun.class=tutorial.MyClient run-single && ant -f C:\\Users\\Carla-PC\\Downloads\\tutorial -Dnb.internal.action.name=run run &&  cd C:\\Users\\Carla-PC\\Downloads\\tutorial\\build\\classes && java -Dcom.sun.xml.internal.ws.transport.http.client.HttpTransportPipe.dump=true tutorial.MyClient
+            //commandsList.add("cd " + antDirectoryPath + " && ant -f " + pathProjectBeingTested + " -Djavac.includes="+entryPoint+".java -Dnb.internal.action.name=run.single -Drun.class="+clientEntryPoint + " run-single && ant -f " +pathProjectBeingTested+ " -Dnb.internal.action.name=run run &&  cd "+pathProjectBeingTested+"\\build\\classes && java -Dcom.sun.xml.internal.ws.transport.http.client.HttpTransportPipe.dump=true "+clientEntryPoint);
             
-            final String clientShFile = userTemporaryDirectoryPath + "\\client.bat";
+            final String clientShFile = userTemporaryDirectoryPath + "\\client-"+new SimpleDateFormat("yyyyMMddHHmmss").format(new Date())+".bat";
             createNewShFile(clientShFile, commandsList);
             
             File file = new File(pathProjectBeingTested + "\\traced-soap-traffic.txt");
@@ -389,7 +382,7 @@ public class Assistant {
                     }
                     
                     foundFirstDirectoryInTheZipFile = true;    
-                    listOfProjectsToBeTested.add(name);
+                    listOfProjectsToBeTested.add(name.replaceFirst("/",""));
                 }
                 file.mkdirs();
                 continue;
@@ -421,7 +414,7 @@ public class Assistant {
     
     public void initilizeGlobalVariables(){    
         log = "";
-        response = new ArrayList();        
+        testResponseList = new ArrayList();        
         resultList = new ArrayList();
     }
         
@@ -601,15 +594,15 @@ public class Assistant {
                         if (!tempNode.getNodeName().equals("return")){
                             if (!hasResponseMultipleValues){
                                 hasResponseMultipleValues = true;
-                                responseValueList.add("The Server response includes multiple values:");
-                                responseValueList.add("\n");
+                                testResponseValue.add("The Server response includes multiple values:");
+                                testResponseValue.add("\n");
                             }
-                            responseValueList.add("Parameter Name = " + tempNode.getNodeName());
-                            responseValueList.add("Parameter Value = " + tempNode.getFirstChild().getTextContent());
-                            responseValueList.add("\n");
+                            testResponseValue.add("Parameter Name = " + tempNode.getNodeName());
+                            testResponseValue.add("Parameter Value = " + tempNode.getFirstChild().getTextContent());
+                            testResponseValue.add("\n");
                         }
                         else
-                            responseValueList.add("Server Returned Value = " + tempNode.getFirstChild().getTextContent() + "\n");                        
+                            testResponseValue.add("Server Returned Value = " + tempNode.getFirstChild().getTextContent() + "\n");                        
                     }  
                 }
                 catch(Exception e){
@@ -675,12 +668,12 @@ public class Assistant {
                         String soapEnvelope = line.substring(index1, (index2 + envelope.length()));                            
                         NodeList list = getSoapBodyFirstChildNodes(soapEnvelope);
 
-                        responseValueList = new ArrayList();
+                        testResponseValue = new ArrayList();
                         //responseValueList.add("Server:");
                         hasResponseMultipleValues = false;
                         populateTheResponseValueListVariableWithTheNodesValue(list);
                         
-                        for ( String response : responseValueList)
+                        for ( String response : testResponseValue)
                             details.add(response);                        
                     }
                 }
