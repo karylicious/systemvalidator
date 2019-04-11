@@ -10,18 +10,18 @@ import javax.xml.bind.annotation.XmlRootElement;
  */
 @XmlRootElement
 public class GradingOutput {
-    private ArrayList<String> gradingResponseList;
-    private ArrayList<Grading> gradingList;
+    private ArrayList<String> responseList;
+    private ArrayList<Grading> gradingResultList;
     
     GradingOutput(){}
     
-    GradingOutput (ArrayList<String>  _gradingResponseList, ArrayList<Grading> _gradingList){
-        gradingResponseList = _gradingResponseList;
-        gradingList = _gradingList;
+    GradingOutput (ArrayList<String>  _gradingResponseList, ArrayList<Grading> _gradingResutlList){
+        responseList = _gradingResponseList;
+        gradingResultList = _gradingResutlList;
     }
     @XmlElement
-    public ArrayList<String> getGradingResponseList() {return gradingResponseList;}
+    public ArrayList<String> getResponseList() {return responseList;}
     
     @XmlElement
-    public ArrayList<Grading> getGradingList() {return gradingList;}
+    public ArrayList<Grading> getGradingResultList() {return gradingResultList;}
 }

@@ -17,14 +17,196 @@ import javax.activation.DataHandler;
 @WebService(portName = "ValidatorPort", serviceName = "Validator")
 public class Validator {  
     
-    //@WebMethod(operationName = "gradeClientProject")
-    //public GradingOutput gradeClientProject (String clientEntryPoint, DataHandler selectedFile, String selectedFileName, ArrayList<ExerciseQuestion> exerciseQuestionList){
+    @WebMethod(operationName = "gradeClientAndServer")
+    public GradingOutput gradeClientAndServer (String clientEntryPoint, DataHandler selectedFile, String selectedFileName){//, ArrayList<ExerciseQuestion> exerciseQuestionList
+        Assistant assistant = Assistant.getInstance();
+        assistant.initilizeGlobalVariables();
+        String userTemporaryDirectoryPath = "";
+        
+        try{
+             
+            //>>>>>>>>>>>>>>>>    CREATION OF TEMPORAY DIRECTORIES AND UPLOAD FILE    <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+            
+            assistant.createLogAndTemporaryDirectories();  
+            userTemporaryDirectoryPath = assistant.getTempDirectoryPath() + "\\" + new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
+            String userUploadDirectoryPath = userTemporaryDirectoryPath + "\\upload";
+            
+            assistant.createDirectory(userUploadDirectoryPath);
+            assistant.uploadFile(selectedFile, selectedFileName, userUploadDirectoryPath);  
+            String zipFilePath = userUploadDirectoryPath + "\\" + selectedFileName;
+
+            //>>>>>>>>>>>>>>>>    UNZIP OF THE FILE AND ITERATION OVER LIST OF PROJECTS FOUND    <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+            
+            String unzipLocation = userTemporaryDirectoryPath + "\\"+selectedFileName; 
+            
+            //unzip inside of a new directory which as the same name as the zip file name
+            ArrayList<String> listOfProjectsToBeTested = assistant.unzipAndGetTheProjectsToBeTested(zipFilePath, unzipLocation);      
+            //String projectName ="";           
+            for(int i = 0; i < listOfProjectsToBeTested.size(); i++){
+                assistant.addGradingResponse("[INFO] Grading " + (i+1) + " out of " + listOfProjectsToBeTested.size() + " projects\n\n\n");
+                assistant.addGradingResponse("\n\n");
+                                
+                String NameOfTheProjectBeingTested = selectedFileName + ".zip";                       
+                String serverDirectoryPath = assistant.getServerProjectPath(unzipLocation); // Assuming that this is a Glassfish web service
+                String clientDirectoryPath = assistant.getClientProjectPath(unzipLocation, clientEntryPoint);                
                 
-        //return new GradingOutput();
-    //}
+                 if(listOfProjectsToBeTested.size() > 1){     
+                     
+                    //>>>>>>>>>>>>>>>>>>  IN CASE OF MULTIPLE PROJECTS UNZIP ONE BY ONE  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<    
+                    
+                    //-==============================
+                    zipFilePath = userTemporaryDirectoryPath+ "\\"+selectedFileName +"\\"+listOfProjectsToBeTested.get(i);                  
+                       
+                    String[] foundProjectName = listOfProjectsToBeTested.get(i).split(".zip");
+                    //unzip inside of a new directory which as the same name as the zip file name but outside the parent directory                           
+                                         
+                    unzipLocation = userTemporaryDirectoryPath + "\\" + foundProjectName[0];                     
+                    assistant.unzipAndGetTheProjectsToBeTested(zipFilePath, unzipLocation);  
+                    
+                    
+                    serverDirectoryPath = assistant.getServerProjectPath(unzipLocation); // Assuming that this is a Glassfish web service
+                    clientDirectoryPath = assistant.getClientProjectPath(unzipLocation, clientEntryPoint);
+                    
+                    
+                     //The array will expect to have just one directory with the name 
+                    
+                    NameOfTheProjectBeingTested = listOfProjectsToBeTested.get(i);                     
+                }                                  
+                assistant.addGradingResponse( "[INFO] Project selected: "+ NameOfTheProjectBeingTested +"\n");   
+
+                //>>>>>>>>>>>>>>>>>>>>>>>   TESTING SERVER   <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+                
+                assistant.addGradingResponse("[INFO] System is searching for the Server project\n\n");    
+                
+                if( serverDirectoryPath.isEmpty() ){
+                    assistant.addGradingResponse("[INFO] System did not find the Server project\n\n");
+                    assistant.addGradingResponse("\n\n");                    
+                    //assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Server did not start","false"));                           
+                    //assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client is not correctly connected to the server","false"));
+                    //assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client did not start","false"));                    
+                    //assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client did not communicate with the Server","false"));
+                    //assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Server did not communicate with the Client","false"));
+                    continue;
+                }
+                
+                assistant.addGradingResponse("[INFO] System did find the Server project\n\n");                
+                assistant.addGradingResponse("[INFO] System is trying to deploy the Server\n\n");  
+                
+                if ( !assistant.hasServerBeenDeployed(serverDirectoryPath, userTemporaryDirectoryPath) ){
+                    assistant.addGradingResponse("[INFO] System did not manage to deploy the Server. Please check your code.\n\n");
+                    assistant.addGradingResponse("\n\n");                    
+                    //assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Server did not start","false"));
+                    //assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client is not correctly connected to the server","false"));
+                    //assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client did not start","false"));
+                    //assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client did not communicate with the Server","false"));
+                    //assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Server did not communicate with the Client","false"));                    
+                    continue;
+                }
+                
+                assistant.addGradingResponse("[INFO] System has deployed Server\n\n");
+                //assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Server did start","true"));
+                
+                //>>>>>>>>>>>>>>>>>>>>>>>   TESTING CLIENT   <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+                
+                assistant.addGradingResponse("[INFO] System is searching for the Client stubs\n\n");
+                
+                assistant.addLog(clientDirectoryPath);
+                //Whenever a new web service reference is added on the client, the wsimport command generates the stubs under the following directories
+                if ( !new File(clientDirectoryPath + "\\build\\generated-sources\\jax-ws").exists() ){
+                    assistant.addGradingResponse("[INFO] System did not find the Client stubs\n\n");
+                    assistant.addGradingResponse("\n\n");
+                    //assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client is not correctly connected to the server","false"));
+                    //assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client did not start","false"));                    
+                    //assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client did not communicate with the Server","false"));
+                    //assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Server did not communicate with the Client","false"));
+                    continue;
+                }          
+                
+                assistant.addGradingResponse("[INFO] System found the Client stubs\n\n");                        
+                assistant.addGradingResponse("[INFO] System is searching for the main class of the Client\n\n");                
+                //assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client is correctly connected to the server","true"));
+                
+                String entryPoint = clientEntryPoint.replace('.', '\\');
+                if(!Files.exists(Paths.get(clientDirectoryPath + "\\build\\classes\\" + entryPoint + ".class"))){
+                    assistant.addGradingResponse("[INFO] System did not find the main class of the Client\n\n");
+                    assistant.addGradingResponse("\n\n");                    
+                    //assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client did not start","false"));
+                    //assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client did not communicate with the Server","false"));
+                    //assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Server did not communicate with the Client","false"));
+                    continue;
+                }
+                               
+                assistant.addGradingResponse("[INFO] System found the main class of the Client\n\n");
+                assistant.addGradingResponse("[INFO] System is trying to start the Client\n\n");                      
+                boolean hasClientStarted = assistant.didRunClientAndSaveOutput(clientEntryPoint, clientDirectoryPath, userTemporaryDirectoryPath);
+
+                if(!hasClientStarted){
+                    assistant.addGradingResponse("[INFO] Client did not start. Please check your code\n\n");
+                    assistant.addGradingResponse("\n\n");
+                    //assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client did not start","false"));                    
+                    //assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client did not communicate with the Server","false"));
+                    //assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Server did not communicate with the Client","false"));
+                    continue;
+                }   
+
+                assistant.addGradingResponse("[INFO] Client has started\n\n");
+                assistant.addGradingResponse("[INFO] System is verifying whether Client has communicated with the Server\n\n"); 
+                //assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client did start","true"));    
+                
+                if( !assistant.didClientCommunicatedWithServer(clientDirectoryPath) ){
+                    assistant.addGradingResponse("[INFO] Client did not communicate with the Server. Please check your code\n\n");
+                    assistant.addGradingResponse("\n\n");                  
+                    //assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client did not communicate with the Server","false"));
+                    //assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Server did not communicate with the Client","false"));
+                    continue;
+                }
+                
+                assistant.addGradingResponse("[INFO] Client has communicated with the Server\n\n");
+                //assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Client did communicate with the Server","true"));                 
+                assistant.addGradingResponse("[INFO] System is verifying whether Server has communicated with the Client\n\n"); 
+                
+                if( !assistant.didServerCommunicatedWithClient(clientDirectoryPath, serverDirectoryPath) ){
+                    assistant.addGradingResponse("[INFO] Server did not communicate with the Client. Please check your code\n\n");
+                    assistant.addGradingResponse("\n\n");                  
+                    //assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Server did not communicate with the Client","false"));
+                    continue;
+                }
+                
+                assistant.addGradingResponse("[INFO] Server has communicated with the Client\n\n");
+                //assistant.addResults(new TestResult(NameOfTheProjectBeingTested,"Server did communicate with the Client","true"));                
+                                
+                
+                assistant.undeplopyServer(serverDirectoryPath, userTemporaryDirectoryPath);                
+                assistant.addGradingResponse("[INFO] System has undeployed Server\n\n");
+                
+                ArrayList<String> serverMethodsList = assistant.getMethodsAvailableOnServer(clientDirectoryPath);   
+                ArrayList<String> listOfInvokedMethodsNames = assistant.getListOfInvokedMethodsNames(clientDirectoryPath, serverMethodsList);                
+                assistant.addGradingResponse("[INFO] Client has invoked " + listOfInvokedMethodsNames.size() + " out of " + serverMethodsList.size() + " methods\n\n");                
+                
+                
+                
+                ArrayList<String> detailsList = assistant.getListOfInvokedMethodsDetails(clientDirectoryPath, listOfInvokedMethodsNames);
+                if ( !detailsList.isEmpty()){
+                    assistant.addGradingResponse("[INFO] Methods invoked by the Client:");
+                    for (String detail : detailsList) {
+                        assistant.addGradingResponse ( detail);
+                        if (detail.equals(""))
+                            assistant.addGradingResponse("\n");
+                    }                    
+                }                               
+                assistant.addGradingResponse("\n\n");
+            }
+        }
+        catch(Exception e){
+            assistant.addLog( e.toString());
+            assistant.createLogFile();
+            assistant.deleteDirectory(new File(userTemporaryDirectoryPath));
+        }  
+        return assistant.terminateGrading(userTemporaryDirectoryPath);
+    }
     
-    //@WebMethod(operationName = "gradeClientServerProject")
-    //public String gradeClientServerProject (DataHandler selectedFile, String selectedFileName){
+    //@WebMethod(operationName = "gradeClient")
+    //public String gradeClient (DataHandler selectedFile, String selectedFileName){
         
         
         
@@ -299,9 +481,10 @@ public class Validator {
                     
                     //String[] subDirectories = assistant.getSubdirectories(pathProjectBeingTested);
                     
+                    
+                    
                     serverDirectoryPath = assistant.getServerProjectPath(unzipLocation); // Assuming that this is a Glassfish web service
                     clientDirectoryPath = assistant.getClientProjectPath(unzipLocation, clientEntryPoint);
-                    
                     
                      //The array will expect to have just one directory with the name 
                     //pathProjectBeingTested += "\\" +subDirectories[0];
@@ -349,7 +532,6 @@ public class Validator {
                 
                 assistant.addTestResponse("[INFO] System is searching for the Client stubs\n\n");
                 
-                assistant.addLog(clientDirectoryPath);
                 //Whenever a new web service reference is added on the client, the wsimport command generates the stubs under the following directories
                 if ( !new File(clientDirectoryPath + "\\build\\generated-sources\\jax-ws").exists() ){
                     assistant.addTestResponse("[INFO] System did not find the Client stubs\n\n");

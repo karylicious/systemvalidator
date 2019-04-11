@@ -44,9 +44,9 @@ import org.w3c.dom.NodeList;
 //Singleton pattern restricts the instantiation of a class and ensures that only one instance of the class exists in the java virtual machine. 
 public class Assistant {
     private static String currentWorkingDirectory, tempDirectoryPath, logDirectoryPath, log, antDirectoryPath;
-    private ArrayList<TestResult> resultList;  
+    private ArrayList<TestResult> testResultList;  //Change this to testResultList and on flask and react as well
     //private ArrayList<String> gradeResponseList;
-    private ArrayList<Grading> gradingList;
+    private ArrayList<Grading> gradingResultList;
     private ArrayList<ExerciseQuestionList> exerciseQuestionList;
     private static Assistant singleInstance = null;
     private ArrayList<String> testResponseList, parametersList, testResponseValue, gradingResponseList;
@@ -59,8 +59,8 @@ public class Assistant {
         antDirectoryPath = "C:\\ant\\bin";
         hasResponseMultipleValues = false;
         parametersList = new ArrayList();
-        //testResponseValueList = new ArrayList();
-        //gradeResponseList = new ArrayList();
+        testResponseValue = new ArrayList();
+        gradingResponseList = new ArrayList();
     }
     
     public static Assistant getInstance(){
@@ -75,9 +75,11 @@ public class Assistant {
     
     public void addLog(Object text){ log += text; }                        
         
-    public ArrayList<TestResult> getResultList(){ return resultList; }  
+    //public ArrayList<TestResult> getResultList(){ return resultList; }
+    
+    //public ArrayList<TestResult> getResultList(){ return resultList; }  
         
-    public void addResults(TestResult result){ resultList.add( result ); }
+    public void addResults(TestResult result){ testResultList.add( result ); }
         
     public String getTempDirectoryPath(){ return tempDirectoryPath; }
     
@@ -110,12 +112,20 @@ public class Assistant {
             e.printStackTrace();
         }
     }   
-            
+    
+    
+    public GradingOutput terminateGrading(String userTemporaryDirectoryPath) {   
+        testResponseList.add("[INFO] Test has finished\n\n");  
+        //deleteDirectory(new File(userTemporaryDirectoryPath));    
+        createLogFile();
+        return new GradingOutput(gradingResponseList, gradingResultList);
+    }
+    
     public Reply terminateTest(String userTemporaryDirectoryPath) {   
         testResponseList.add("[INFO] Test has finished\n\n");  
         //deleteDirectory(new File(userTemporaryDirectoryPath));    
         createLogFile();
-        return new Reply(testResponseList, resultList);
+        return new Reply(testResponseList, testResultList);
     }
     
     public void uploadFile(DataHandler selectedFile, String fileName, String uploadLocation) throws IOException {               
@@ -163,7 +173,7 @@ public class Assistant {
             //commandsList.add("ant -f " + serverDirectoryPath + " run-deploy");
             
             commandsList.add("cd C:\\Program Files\\glassfish-4.1.1\\bin");
-            commandsList.add("asadmin deploy "+serverDirectoryPath +"\\dist\\"+projectName+".war");
+            commandsList.add("asadmin deploy \""+serverDirectoryPath +"\\dist\\"+projectName+".war\"");
             
             String antDeployShFile = userTemporaryDirectoryPath + "\\antdeploy-"+new SimpleDateFormat("yyyyMMddHHmmss").format(new Date())+".bat";
             createNewShFile(antDeployShFile, commandsList);
@@ -219,7 +229,7 @@ public class Assistant {
             //ANT RUN-DEPLOY
             ArrayList<String> commandsList = new ArrayList();
             commandsList.add("cd C:\\Program Files\\glassfish-4.1.1\\bin");
-            commandsList.add("asadmin undeploy "+serverDirectoryPath +"\\dist\\"+projectName);
+            commandsList.add("asadmin undeploy \""+serverDirectoryPath +"\\dist\\"+projectName+"\"");
             //commandsList.add("cd " + antDirectoryPath);
             //commandsList.add("ant -f " + serverDirectoryPath + " run-undeploy");
             
@@ -415,7 +425,9 @@ public class Assistant {
     public void initilizeGlobalVariables(){    
         log = "";
         testResponseList = new ArrayList();        
-        resultList = new ArrayList();
+        testResultList = new ArrayList();
+        gradingResponseList = new ArrayList();    
+        gradingResultList = new ArrayList();
     }
         
     public ArrayList<String> getListOfMethodsOnServer(String wsdlFile) {
