@@ -6,17 +6,21 @@ import javax.xml.bind.annotation.*;
  * @author Carla Augusto
  */
 @XmlRootElement
-public class TestResult {
+public class GradingResult {
     private String projectOwner;
     private String title;
     private String hasPassed;
+    private String actualTestOutput;
+    private String grade;
     
-    TestResult(){}
+    GradingResult(){}
     
-    TestResult(String _projectOwner, String _title, String _hasPassed){
+    GradingResult(String _projectOwner, String _title, String _hasPassed, String _actualTestOutput, String _grade){
         projectOwner = _projectOwner;
         title = _title;
         hasPassed = _hasPassed;
+        actualTestOutput = _actualTestOutput;
+        grade = _grade;
     }
     
     @XmlElement
@@ -27,4 +31,10 @@ public class TestResult {
     
     @XmlElement
     public String getHasPassed() {return hasPassed;}
+    
+    @XmlElement
+    public String getActualTestOutput() {return actualTestOutput;}
+    
+    @XmlElement
+    public String getGrade() {return grade;}
 }

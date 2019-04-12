@@ -10,16 +10,19 @@ package com.clieser;
  * @author Carla-PC
  */
 public class ExerciseQuestion {
-    private String methodName;
-    private String points;
+    private String expectedInvokedMethod;
+    private double points;
+    String expectedOutput;
     
-    
-    ExerciseQuestion(String _methodName, String _points){
-        methodName = _methodName;
+    ExerciseQuestion(String _expectedInvokedMethod, String _expectedOutput, double _points){
+        expectedInvokedMethod = _expectedInvokedMethod;
         points = _points;
+        expectedOutput = _expectedOutput;
     }
     
-    public String getMethodName(){ return methodName; }
+    public String getExpectedInvokedMethod(){ return expectedInvokedMethod; }
     
-    public String getPoints(){ return points; }    
+    public double getPoints(){ return points; }    
+    
+    public String getExpectedOutput(){ return expectedOutput; }  
 }

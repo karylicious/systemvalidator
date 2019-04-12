@@ -26,6 +26,7 @@ import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import javax.activation.DataHandler;
+import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.soap.MessageFactory;
 import javax.xml.soap.SOAPEnvelope;
@@ -35,6 +36,7 @@ import javax.xml.transform.stream.StreamSource;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
 
 /**
  *
@@ -46,8 +48,9 @@ public class Assistant {
     private static String currentWorkingDirectory, tempDirectoryPath, logDirectoryPath, log, antDirectoryPath;
     private ArrayList<TestResult> testResultList;  //Change this to testResultList and on flask and react as well
     //private ArrayList<String> gradeResponseList;
-    private ArrayList<Grading> gradingResultList;
+    private ArrayList<GradingResult> gradingResultList;
     private ArrayList<ExerciseQuestionList> exerciseQuestionList;
+    private ArrayList<UserAnswer> userAnswerList;
     private static Assistant singleInstance = null;
     private ArrayList<String> testResponseList, parametersList, testResponseValue, gradingResponseList;
     private boolean hasResponseMultipleValues = false;
@@ -79,8 +82,10 @@ public class Assistant {
     
     //public ArrayList<TestResult> getResultList(){ return resultList; }  
         
-    public void addResults(TestResult result){ testResultList.add( result ); }
-        
+    public void addTestResults(TestResult result){ testResultList.add( result ); }
+    
+    public void addGradingResults(GradingResult result){ gradingResultList.add( result ); }
+         
     public String getTempDirectoryPath(){ return tempDirectoryPath; }
     
     public String getLogDirectoryPath(){ return logDirectoryPath; }
@@ -114,11 +119,11 @@ public class Assistant {
     }   
     
     
-    public GradingOutput terminateGrading(String userTemporaryDirectoryPath) {   
-        testResponseList.add("[INFO] Test has finished\n\n");  
+    public Grading terminateGrading(String userTemporaryDirectoryPath, double finalGrade) {  
+        gradingResponseList.add("[INFO] Grading has finished\n\n");  
         //deleteDirectory(new File(userTemporaryDirectoryPath));    
         createLogFile();
-        return new GradingOutput(gradingResponseList, gradingResultList);
+        return new Grading(gradingResponseList, gradingResultList, Double.toString(finalGrade));
     }
     
     public Reply terminateTest(String userTemporaryDirectoryPath) {   
@@ -155,6 +160,11 @@ public class Assistant {
         try{         
             File file = new File(serverDirectoryPath);
             String projectName = file.getName();
+            
+             // log +=serverDirectoryPath + "   ";
+             // createLogFile();
+              //  log += projectName;
+              //  createLogFile();
             
             //ANT BUILD
             ArrayList<String> commandsList = new ArrayList();
@@ -206,7 +216,7 @@ public class Assistant {
             //String projectName = file.getName();
             boolean foundApp = false;
             
-            for(String app : deployedList){
+            for(String app : deployedList){              
                 if ( app.equals(projectName) ){
                     foundApp = true;
                     break;
@@ -381,9 +391,10 @@ public class Assistant {
         
         while (enu.hasMoreElements()) {
             ZipEntry zipEntry = new ZipEntry((ZipEntry) enu.nextElement());
-            String name = zipEntry.getName();                                
-            File file = new File(unzipLocation + "\\" + name);
+            String name = zipEntry.getName(); 
             
+            File file = new File(unzipLocation + "\\" + name);
+             
             if (name.endsWith("/")) {
                 if(!foundFirstDirectoryInTheZipFile){
                     if (file.exists()){ // This means that there is already a web service with the same name as the one on the zip file
@@ -392,7 +403,7 @@ public class Assistant {
                     }
                     
                     foundFirstDirectoryInTheZipFile = true;    
-                    listOfProjectsToBeTested.add(name.replaceFirst("/",""));
+                    listOfProjectsToBeTested.add(name);
                 }
                 file.mkdirs();
                 continue;
@@ -698,6 +709,130 @@ public class Assistant {
         }
         return details;
     }
+    
+    
+    public ArrayList<ExerciseQuestion> getExerciseQuestions(String exerciseQuestionXML){
+        //Example of the content on the exerciseQuestionXML variable
+        // This structure is defined in the GradeClientServer class on Flask when the get() method of the GradeClientServer class is called
+        /*<?xml version="1.0" encoding="UTF-8"?>
+        <questions>
+            <question>
+                <expectedinvokedmethod>isConnected</expectedinvokedmethod>
+                <points>20.0</points>
+                <expectedoutput>true</expectedoutput>
+            </question>
+        </questions>
+        */
+             
+        ArrayList<ExerciseQuestion> list = new ArrayList();
+        try{
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            InputSource is = new InputSource(new StringReader(exerciseQuestionXML));
+            Document d = builder.parse(is);
+
+            NodeList elements = d.getElementsByTagName("questions");
+            NodeList questionNodes = elements.item(0).getChildNodes();         
+            
+            for (int i = 0; i < questionNodes.getLength(); i++) {
+                
+                NodeList questionChildNodes = questionNodes.item(i).getChildNodes();   
+                
+                String expectedinvokedmethod = questionChildNodes.item(0).getFirstChild().getTextContent();
+                String points = questionChildNodes.item(1).getFirstChild().getTextContent(); 
+                String expectedoutput = questionChildNodes.item(2).getFirstChild().getTextContent();                
+                
+                list.add(new ExerciseQuestion(expectedinvokedmethod, expectedoutput, Double.parseDouble(points)));                   
+            }        
+        }
+        catch(Exception e){
+            log += e.toString();
+            createLogFile();
+        }
+        return list;
+    }
+    
+    
+    public ArrayList<UserAnswer> getUserAnswerList(String clientDirectoryPath,ArrayList<ExerciseQuestion> exerciseQuestionsList){
+        try{            
+            File file = new File(clientDirectoryPath + "\\traced-soap-traffic.txt");   
+            BufferedReader br = new BufferedReader(new FileReader(file)); 
+            String line;              
+            
+            boolean isTheResponseSection = false;
+            String currentMethodName = "";
+            userAnswerList = new ArrayList();
+            
+            while (( line = br.readLine()) != null) {              
+                if ( line.contains("SOAPAction:")){
+                    for (ExerciseQuestion question : exerciseQuestionsList){
+                        if (doesContainExactWord(line, question.getExpectedInvokedMethod()+"Request")){
+                            currentMethodName = question.getExpectedInvokedMethod();
+                            break;
+                        }
+                    }
+                }                
+                else if ( line.contains("---[HTTP response")){
+                    isTheResponseSection = true;                    
+                }
+                else if (isTheResponseSection && !currentMethodName.isEmpty()) {
+                    if ( line.contains("<S:Envelope")){
+                        isTheResponseSection = false;
+                        
+                        int index1=line.indexOf("<S:Envelope");   
+                        int index2=line.indexOf("</S:Envelope>");
+                        String envelope = "</S:Envelope>";      
+                        
+                        String soapEnvelope = line.substring(index1, (index2 + envelope.length()));                            
+                        NodeList list = getSoapBodyFirstChildNodes(soapEnvelope);
+                        
+                        populateTheUserAnswerListVariableIncludingServerOutput(list, currentMethodName);                       
+                        currentMethodName ="";                                              
+                    }
+                }
+            }  
+            br.close();
+        }
+        catch(Exception e){
+            log += e.toString();
+            createLogFile();
+        }
+        return userAnswerList;
+    }    
+    
+    private void populateTheUserAnswerListVariableIncludingServerOutput(NodeList nodeList, String userInvokedMethod) {        
+        for (int count = 0; count < nodeList.getLength(); count++) {
+
+            Node tempNode = nodeList.item(count);
+
+            // make sure it's element node.
+            if (tempNode.getNodeType() == Node.ELEMENT_NODE) {  
+                // loop again if has child nodes
+                if (tempNode.hasChildNodes())
+                    populateTheResponseValueListVariableWithTheNodesValue(tempNode.getChildNodes());
+
+                //GET THE VALUES ONLY IF THE CURRENT NODE IS NOT A PARENT
+                // IN CASE IT IS NOT A PARENT, THE NAME OF THE FIRST CHILD WILL ALWAYS RETURN "#text" 
+                // THE "#text" VALUE COMES FROM THE XML SPECIFICATION)
+                try{
+                    if ( tempNode.getFirstChild().getNodeName().equals("#text") ){
+                        if (tempNode.getNodeName().equals("return")) {                            
+                            userAnswerList.add(new UserAnswer(userInvokedMethod, tempNode.getFirstChild().getTextContent()));     
+                        }
+                    }  
+                }
+                catch(Exception e){
+                    //The execption means that the server has returned an exception as response
+                    userAnswerList.add(new UserAnswer(userInvokedMethod, "[Server has generated an exception]"));
+                    log += e.toString();
+                    createLogFile();
+                }
+            }
+        }       
+    }        
+    
+    
+    
     
     public boolean didServerCommunicatedWithClient(String clientDirectoryPath, String serverDirectoryPath){
         try{
