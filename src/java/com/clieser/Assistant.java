@@ -45,7 +45,7 @@ import org.xml.sax.InputSource;
 
 //Singleton pattern restricts the instantiation of a class and ensures that only one instance of the class exists in the java virtual machine. 
 public class Assistant {
-    private static String currentWorkingDirectory, tempDirectoryPath, logDirectoryPath, log, antDirectoryPath;
+    private static String currentWorkingDirectory, tempDirectoryPath, exercisesDirectoryPath, logDirectoryPath, log, antDirectoryPath;
     private ArrayList<TestResult> testResultList;  //Change this to testResultList and on flask and react as well
     //private ArrayList<String> gradeResponseList;
     private ArrayList<GradingResult> gradingResultList;
@@ -59,6 +59,7 @@ public class Assistant {
         currentWorkingDirectory = System.getProperty("user.dir") + "\\src\\main\\java\\com\\clieser";
         tempDirectoryPath = currentWorkingDirectory + "\\Temp";
         logDirectoryPath = currentWorkingDirectory + "\\Logs";
+        exercisesDirectoryPath =  currentWorkingDirectory + "\\exercises";
         antDirectoryPath = "C:\\ant\\bin";
         hasResponseMultipleValues = false;
         parametersList = new ArrayList();
@@ -90,15 +91,18 @@ public class Assistant {
     
     public String getLogDirectoryPath(){ return logDirectoryPath; }
     
+    public String getExercisesDirectoryPath(){ return exercisesDirectoryPath; }
+    
            
     public void createDirectory(String directory) throws Exception{
         if (!(Files.exists(Paths.get(directory)))) 
             Files.createDirectories(Paths.get(directory));        
     }       
     
-    public void createLogAndTemporaryDirectories() throws Exception{
+    public void createLogAndTemporaryAndExercisesDirectories() throws Exception{
         createDirectory(tempDirectoryPath);        
         createDirectory(logDirectoryPath);
+        createDirectory(exercisesDirectoryPath);  
     }        
     
     public void createLogFile() { 
@@ -377,7 +381,7 @@ public class Assistant {
         return null;
     }    
            
-    public ArrayList<String> unzipAndGetTheProjectsToBeTested(final String zipFilePath, String unzipLocation) throws IOException { 
+    public ArrayList<String> unzipAndGetTheProjectsToBeTested(final String zipFilePath, String unzipLocation, boolean isAnExerciseFile) throws IOException { 
         ArrayList<String> listOfProjectsToBeTested = new ArrayList();
         // Open the zip file
         ZipFile zipFile = new ZipFile(zipFilePath);
@@ -389,10 +393,11 @@ public class Assistant {
         
         boolean foundFirstDirectoryInTheZipFile = false;   
         
+        System.out.println(unzipLocation);
         while (enu.hasMoreElements()) {
             ZipEntry zipEntry = new ZipEntry((ZipEntry) enu.nextElement());
             String name = zipEntry.getName(); 
-            
+           
             File file = new File(unzipLocation + "\\" + name);
              
             if (name.endsWith("/")) {
@@ -402,8 +407,12 @@ public class Assistant {
                         return listOfProjectsToBeTested;
                     }
                     
-                    foundFirstDirectoryInTheZipFile = true;    
-                    listOfProjectsToBeTested.add(name);
+                    foundFirstDirectoryInTheZipFile = true; 
+                    if(isAnExerciseFile)
+                        listOfProjectsToBeTested.add(name);
+                    else
+                        listOfProjectsToBeTested.add(file.getParentFile().getName());
+                    
                 }
                 file.mkdirs();
                 continue;

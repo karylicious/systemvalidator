@@ -28,7 +28,7 @@ public class Validator {
              
             //>>>>>>>>>>>>>>>>    CREATION OF TEMPORAY DIRECTORIES AND UPLOAD FILE    <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
             
-            assistant.createLogAndTemporaryDirectories();  
+            assistant.createLogAndTemporaryAndExercisesDirectories();  
             userTemporaryDirectoryPath = assistant.getTempDirectoryPath() + "\\" + new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
             String userUploadDirectoryPath = userTemporaryDirectoryPath + "\\upload";
             
@@ -41,7 +41,7 @@ public class Validator {
             String unzipLocation = userTemporaryDirectoryPath + "\\"+selectedFileName; 
             
             //unzip inside of a new directory which as the same name as the zip file name
-            ArrayList<String> listOfProjectsToBeTested = assistant.unzipAndGetTheProjectsToBeTested(zipFilePath, unzipLocation);      
+            ArrayList<String> listOfProjectsToBeTested = assistant.unzipAndGetTheProjectsToBeTested(zipFilePath, unzipLocation, false);      
             //String projectName ="";           
             for(int i = 0; i < listOfProjectsToBeTested.size(); i++){
                 assistant.addGradingResponse("[INFO] Grading " + (i+1) + " out of " + listOfProjectsToBeTested.size() + " projects\n\n\n");
@@ -62,7 +62,7 @@ public class Validator {
                     //unzip inside of a new directory which as the same name as the zip file name but outside the parent directory                           
                                          
                     unzipLocation = userTemporaryDirectoryPath + "\\" + foundProjectName[0];                     
-                    assistant.unzipAndGetTheProjectsToBeTested(zipFilePath, unzipLocation);  
+                    assistant.unzipAndGetTheProjectsToBeTested(zipFilePath, unzipLocation, false);  
                     
                     
                     serverDirectoryPath = assistant.getServerProjectPath(unzipLocation); // Assuming that this is a Glassfish web service
@@ -223,7 +223,7 @@ public class Validator {
              
             //>>>>>>>>>>>>>>>>    CREATION OF TEMPORAY DIRECTORIES AND UPLOAD FILE    <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
             
-            assistant.createLogAndTemporaryDirectories();  
+            assistant.createLogAndTemporaryAndExercisesDirectories();  
             userTemporaryDirectoryPath = assistant.getTempDirectoryPath() + "\\" + new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
             String userUploadDirectoryPath = userTemporaryDirectoryPath + "\\upload";
             
@@ -236,7 +236,7 @@ public class Validator {
             String unzipLocation = userTemporaryDirectoryPath + "\\"+selectedFileName; 
             
             //unzip inside of a new directory which as the same name as the zip file name
-            ArrayList<String> listOfProjectsToBeTested = assistant.unzipAndGetTheProjectsToBeTested(zipFilePath, unzipLocation);      
+            ArrayList<String> listOfProjectsToBeTested = assistant.unzipAndGetTheProjectsToBeTested(zipFilePath, unzipLocation, false);      
             //String projectName ="";           
             for(int i = 0; i < listOfProjectsToBeTested.size(); i++){
                 assistant.addGradingResponse("[INFO] Grading " + (i+1) + " out of " + listOfProjectsToBeTested.size() + " projects\n\n\n");
@@ -257,7 +257,7 @@ public class Validator {
                     //unzip inside of a new directory which as the same name as the zip file name but outside the parent directory                           
                                          
                     unzipLocation = userTemporaryDirectoryPath + "\\" + foundProjectName[0];                     
-                    assistant.unzipAndGetTheProjectsToBeTested(zipFilePath, unzipLocation);  
+                    assistant.unzipAndGetTheProjectsToBeTested(zipFilePath, unzipLocation, false);  
                     
                     
                     //serverDirectoryPath = assistant.getServerProjectPath(unzipLocation); // Assuming that this is a Glassfish web service
@@ -409,15 +409,14 @@ public class Validator {
     
     @WebMethod(operationName = "deployServer")
     public String deployServer (DataHandler selectedFile, String selectedFileName){
-        
+        //System.out.println("heeey");
         Assistant assistant = Assistant.getInstance();
         assistant.initilizeGlobalVariables();
         String projectName = "";
         String userTemporaryDirectoryPath = "";
         
         try{
-            assistant.createLogAndTemporaryDirectories();  
-            String exercisesDirectoryPath = assistant.getTempDirectoryPath()  + "\\exercises";                     
+            assistant.createLogAndTemporaryAndExercisesDirectories();                   
             
             userTemporaryDirectoryPath = assistant.getTempDirectoryPath() + "\\" + new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
             assistant.createDirectory(userTemporaryDirectoryPath);
@@ -430,23 +429,24 @@ public class Validator {
       
             String zipFilePath = userTemporaryDirectoryPath + "\\" + selectedFileName;
             
-            ArrayList<String> project = assistant.unzipAndGetTheProjectsToBeTested(zipFilePath, exercisesDirectoryPath);      
+            ArrayList<String> project = assistant.unzipAndGetTheProjectsToBeTested(zipFilePath, assistant.getExercisesDirectoryPath(), true);      
             if(project.isEmpty()){
                 assistant.deleteDirectory(new File(userTemporaryDirectoryPath));
                 return "There is already a deployed web service with the same name as the one on the zip file! Please try again with a different name.";
             }
             
-            projectName = project.get(0); // This returns the name of the project name  directory along with the first directy name inside of it
-            
-            String[] name =  projectName.split("/");
-            
-            String serverDirectoryPath = exercisesDirectoryPath + "\\" + name[0];
+            projectName = project.get(0); 
+            //System.out.println(projectName);
+            //String[] name =  projectName.split("/");
+            //System.out.println(name[0]);
+            String serverDirectoryPath = assistant.getExercisesDirectoryPath() + "\\" + projectName;
             
             
             
             boolean isServerDeployed = assistant.hasServerBeenDeployed(serverDirectoryPath, userTemporaryDirectoryPath);
             assistant.deleteDirectory(new File(userTemporaryDirectoryPath));
             
+            System.out.println(serverDirectoryPath);
             if(!isServerDeployed){
                 String information;
                 if ( !new File(serverDirectoryPath + "\\build").exists() )                    
@@ -463,7 +463,7 @@ public class Validator {
             assistant.createLogFile();
             assistant.deleteDirectory(new File(userTemporaryDirectoryPath));
         }   
-        return projectName;
+        return projectName + "/";
     }
       
     @WebMethod(operationName = "undeployServer")
@@ -471,8 +471,7 @@ public class Validator {
         Assistant assistant = Assistant.getInstance();
         assistant.initilizeGlobalVariables();
         
-        String exercisesDirectoryPath = assistant.getTempDirectoryPath()  + "\\exercises"; 
-        String serverDirectoryPath = exercisesDirectoryPath + "\\" + serverDirectoryName;
+        String serverDirectoryPath = assistant.getExercisesDirectoryPath() + "\\" + serverDirectoryName;
         String userTemporaryDirectoryPath = assistant.getTempDirectoryPath() + "\\" + new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
         
         try{
@@ -498,7 +497,7 @@ public class Validator {
         try {        
             //>>>>>>>>>>>>>>>>    CREATION OF TEMPORAY DIRECTORIES AND UPLOAD FILE    <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
             
-            assistant.createLogAndTemporaryDirectories();  
+            assistant.createLogAndTemporaryAndExercisesDirectories();  
             userTemporaryDirectoryPath = assistant.getTempDirectoryPath() + "\\" + new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
             String userUploadDirectoryPath = userTemporaryDirectoryPath + "\\upload";
             
@@ -511,7 +510,7 @@ public class Validator {
             String unzipLocation = userTemporaryDirectoryPath + "\\"+selectedFileName; 
             
             //   unzip inside of a new directory which as the same name as the zip file name
-            ArrayList<String> listOfProjectsToBeTested = assistant.unzipAndGetTheProjectsToBeTested(zipFilePath, unzipLocation);            
+            ArrayList<String> listOfProjectsToBeTested = assistant.unzipAndGetTheProjectsToBeTested(zipFilePath, unzipLocation, false);            
                     
             for(int i = 0; i < listOfProjectsToBeTested.size(); i++){
                 assistant.addTestResponse("[INFO] Testing " + (i+1) + " out of " + listOfProjectsToBeTested.size() + " projects\n\n\n");
@@ -530,7 +529,7 @@ public class Validator {
                     //unzip inside of a new directory which as the same name as the zip file name but outside the parent directory                           
                                          
                     pathProjectBeingTested = userTemporaryDirectoryPath + "\\" + projectName[0];                     
-                    assistant.unzipAndGetTheProjectsToBeTested(zipFilePath, pathProjectBeingTested);  
+                    assistant.unzipAndGetTheProjectsToBeTested(zipFilePath, pathProjectBeingTested, false);  
                     
                     String[] subDirectories = assistant.getSubdirectories(pathProjectBeingTested);
                     
@@ -542,6 +541,7 @@ public class Validator {
                 
                 assistant.addTestResponse( "[INFO] Project selected: "+ NameOfTheProjectBeingTested +"\n");            
                 assistant.addTestResponse("[INFO] System is searching for the Client stubs\n\n");
+               // System.out.println(pathProjectBeingTested);
                 
                 //Whenever a new web service reference is added on the client, the wsimport command generates the stubs under the following directories
                 if ( !new File(pathProjectBeingTested + "\\build\\generated-sources\\jax-ws").exists() ){
@@ -627,7 +627,7 @@ public class Validator {
         try {     
             //>>>>>>>>>>>>>>>>    CREATION OF TEMPORAY DIRECTORIES AND UPLOAD FILE    <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
             
-            assistant.createLogAndTemporaryDirectories();  
+            assistant.createLogAndTemporaryAndExercisesDirectories();  
             userTemporaryDirectoryPath = assistant.getTempDirectoryPath() + "\\" + new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
             String userUploadDirectoryPath = userTemporaryDirectoryPath + "\\upload";
             
@@ -640,7 +640,7 @@ public class Validator {
             String unzipLocation = userTemporaryDirectoryPath + "\\"+selectedFileName; 
             
             //unzip inside of a new directory which as the same name as the zip file name
-            ArrayList<String> listOfProjectsToBeTested = assistant.unzipAndGetTheProjectsToBeTested(zipFilePath, unzipLocation);      
+            ArrayList<String> listOfProjectsToBeTested = assistant.unzipAndGetTheProjectsToBeTested(zipFilePath, unzipLocation, false);      
             //String projectName ="";           
             for(int i = 0; i < listOfProjectsToBeTested.size(); i++){
                 assistant.addTestResponse("[INFO] Testing " + (i+1) + " out of " + listOfProjectsToBeTested.size() + " projects\n\n\n");
@@ -677,7 +677,7 @@ public class Validator {
                     //unzip inside of a new directory which as the same name as the zip file name but outside the parent directory                           
                                          
                     unzipLocation = userTemporaryDirectoryPath + "\\" + foundProjectName[0];                     
-                    assistant.unzipAndGetTheProjectsToBeTested(zipFilePath, unzipLocation);  
+                    assistant.unzipAndGetTheProjectsToBeTested(zipFilePath, unzipLocation, false);  
                     
                     //String[] subDirectories = assistant.getSubdirectories(pathProjectBeingTested);
                     
