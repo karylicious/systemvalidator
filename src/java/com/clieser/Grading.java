@@ -4,12 +4,9 @@ import java.util.ArrayList;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
-/**
- *
- * @author Carla Augusto
- */
 @XmlRootElement
 public class Grading {
+    
     private ArrayList<String> responseList;
     private ArrayList<GradingResult> gradingResultList;
     private String finalGrade;
@@ -21,6 +18,7 @@ public class Grading {
         gradingResultList = _gradingResutlList;
         finalGrade = _finalGrade;
     }
+    
     @XmlElement
     public ArrayList<String> getResponseList() {return responseList;}
     

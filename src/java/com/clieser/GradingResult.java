@@ -1,12 +1,11 @@
 package com.clieser;
 
-import javax.xml.bind.annotation.*;
-/**
- *
- * @author Carla Augusto
- */
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+
 @XmlRootElement
 public class GradingResult {
+    
     private String projectOwner;
     private String title;
     private String hasPassed;
