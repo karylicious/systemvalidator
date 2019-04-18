@@ -53,8 +53,10 @@ public class Automation {
             }
             
             projectName = project.get(0); 
-            String serverDirectoryPath = FileAssistant.getExercisesDirectoryPath() + "\\" + projectName;                       
+            projectName = projectName.replaceAll("/build/", "");
             
+            String serverDirectoryPath = FileAssistant.getExercisesDirectoryPath() + "\\" + projectName;                       
+                        
             boolean isServerDeployed = ServerAssistant.hasServerBeenDeployed(serverDirectoryPath, userTemporaryDirectoryPath);
             FileAssistant.deleteDirectory(new File(userTemporaryDirectoryPath));
             
