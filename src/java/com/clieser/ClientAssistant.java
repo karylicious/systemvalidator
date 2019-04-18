@@ -24,20 +24,22 @@ public class ClientAssistant {
             // This command will trace the soap message
             commandsList.add("java -Dcom.sun.xml.internal.ws.transport.http.client.HttpTransportPipe.dump=true " + clientEntryPoint); 
                         
-            final String clientShFile = userTemporaryDirectoryPath + "\\client-"+new SimpleDateFormat("yyyyMMddHHmmss").format(new Date())+".bat";
-            FileAssistant.createNewShFile(clientShFile, commandsList);
+            final String clientBatchFile = userTemporaryDirectoryPath + "\\client-"+new SimpleDateFormat("yyyyMMddHHmmss").format(new Date())+".bat";
+            FileAssistant.createNewBatchFile(clientBatchFile, commandsList);
             
+            // The output of the clientBatchFile will be written on traced-soap-traffic.txt file
             File file = new File(pathProjectBeingTested + "\\traced-soap-traffic.txt");
             FileOutputStream outputStream = new FileOutputStream(file);
             
             OutputStreamWriter outputWriter = new OutputStreamWriter(outputStream);    
             Writer theWriter = new BufferedWriter(outputWriter);            
             
-            Process process = Runtime.getRuntime().exec("cmd /c "+clientShFile);
-            String line;
+            Process process = Runtime.getRuntime().exec(clientBatchFile);            
             BufferedReader br = new BufferedReader(new InputStreamReader(process.getInputStream())); 
             
+            String line;
             boolean foundSoapMessage = false;
+            
             while ((line = br.readLine()) != null) {
                 if(line.contains("---["))
                     foundSoapMessage = true;
@@ -73,6 +75,7 @@ public class ClientAssistant {
             File file = new File(pathProjectBeingTested + "\\traced-soap-traffic.txt");   
             BufferedReader br = new BufferedReader(new FileReader(file)); 
 
+            // It will just get the first line on traced-soap-traffic.txt file
             String firstLine;            
             while (( firstLine = br.readLine()) != null) { 
                 br.close();

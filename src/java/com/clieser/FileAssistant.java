@@ -51,7 +51,7 @@ public class FileAssistant {
             OutputStreamWriter outputWriter = new OutputStreamWriter(outputStream); 
 
             Writer theWriter = new BufferedWriter(outputWriter);
-            theWriter.write((String)log);
+            theWriter.write(log);
             theWriter.close();            
             
         } catch (IOException e) {
@@ -59,19 +59,23 @@ public class FileAssistant {
         }
     } 
     
-    public static void uploadFile(DataHandler selectedFile, String fileName, String uploadLocation) throws IOException {               
+    public static void uploadFile(DataHandler selectedFile, String fileName, String uploadLocation) throws IOException {           
         InputStream input = selectedFile.getInputStream();
         OutputStream output = new FileOutputStream( new File(uploadLocation + "\\"+ fileName));
 
+        // Reads at most 100000 bytes from the supplied input stream and
+        // returns them as a byte array
         byte[] b = new byte[100000];
         int bytesRead = 0;
 
+        // iterate as long as bytesRead  is not -1 or End Of File is reached
+        // write the bytes into the new file
         while ((bytesRead = input.read(b)) != -1) {
             output.write(b, 0, bytesRead);
         }         
     }
     
-    public static void createNewShFile(String intendedFile, ArrayList<String> commands) throws IOException {  
+    public static void createNewBatchFile(String intendedFile, ArrayList<String> commands) throws IOException {  
         File file = new File(intendedFile);
         file.createNewFile();
         PrintWriter writer = new PrintWriter(intendedFile, "UTF-8");
@@ -83,6 +87,8 @@ public class FileAssistant {
     }      
      
     public static void deleteDirectory(File directory){
+        // System.gc() is used beacause somehow the zip file reader does not get closed after reading the a file. 
+        // The System.gc() will suggest that the VM do a garbage collection
         System.gc();
         delete(directory);
     }   
@@ -121,34 +127,42 @@ public class FileAssistant {
         });        
     }
     
-    public static String[] getSubdirectories(String parentDirectoryPath){
+    public static String[] getSubdirectories(String parentDirectoryPath){      
         File file = new File(parentDirectoryPath);
         
-        return file.list(new FilenameFilter() {
+        file.list(new FilenameFilter() {
           @Override
           public boolean accept(File current, String name) {
             return new File(current, name).isDirectory();
           }
         });
+        
+        return file.list();
     }
                
     public static ArrayList<String> unzipAndGetTheProjectsToBeTested(final String zipFilePath, String unzipLocation, boolean isAnExerciseFile) throws IOException { 
         ArrayList<String> listOfProjectsToBeTested = new ArrayList();
         // Open the zip file
+                
         ZipFile zipFile = new ZipFile(zipFilePath);
         Enumeration<?> enu = zipFile.entries();
-
+        
+        
         if (!(Files.exists(Paths.get(unzipLocation)))) {
             Files.createDirectories(Paths.get(unzipLocation));
         }            
+        
+        
         
         boolean foundFirstDirectoryInTheZipFile = false; 
        
         while (enu.hasMoreElements()) {
             ZipEntry zipEntry = new ZipEntry((ZipEntry) enu.nextElement());
+            
             String name = zipEntry.getName(); 
+            name = name.replaceAll("\\s", "");
            
-            File file = new File(unzipLocation + "\\" + name);
+            File file = new File(unzipLocation, name);//new File(unzipLocation + "\\" + name);
              
             if (name.endsWith("/")) {
                 if(!foundFirstDirectoryInTheZipFile){
@@ -159,7 +173,7 @@ public class FileAssistant {
                     
                     foundFirstDirectoryInTheZipFile = true; 
                     if(isAnExerciseFile)
-                        listOfProjectsToBeTested.add(file.getParentFile().getName());
+                        listOfProjectsToBeTested.add(name);
                     else
                         listOfProjectsToBeTested.add(file.getParentFile().getName());
                     

@@ -26,8 +26,10 @@ public class SoapEnvelopeAssistant {
     private static boolean hasResponseMultipleValues;
     
     private static boolean doesContainExactWord(String source, String wordTofind){
-        String pattern = ".*"+wordTofind+".*";
-        Pattern p=Pattern.compile(pattern);
+        String regularExpression = ".*"+wordTofind+".*";
+        Pattern p=Pattern.compile(regularExpression);
+        
+        // Creates a matcher that will match the given input against this pattern.
         Matcher m=p.matcher(source);
         return m.matches();
     }
@@ -70,20 +72,26 @@ public class SoapEnvelopeAssistant {
         return invokedMethodsNameList;
     }    
     
-    private static NodeList getSoapBodyFirstChildNodes(String soapEnvelope) {
+    private static NodeList getSoapBodyOfFirstChildNodes(String soapEnvelope) {
         NodeList childNodes = null;
         try {
-            //https://stackoverflow.com/questions/32646444/generate-soap-message-from-java-string
-            MessageFactory msgFactory = MessageFactory.newInstance();
-            SOAPMessage request = msgFactory.createMessage();
-            SOAPPart msgPart = request.getSOAPPart();
-            StreamSource content = new StreamSource(new StringReader(soapEnvelope));
-            msgPart.setContent(content);    
+            // Generate soap message from soapEnvelope string
             
-            SOAPEnvelope envelopee = msgPart.getEnvelope();            
+            // A factory for creating SOAPMessage objects
+            MessageFactory messageFactory = MessageFactory.newInstance();
+            
+            //Creates a new SOAPMessage object with the default SOAPPart, SOAPEnvelope, SOAPBody, and SOAPHeader objects. 
+            SOAPMessage soapMessageObject = messageFactory.createMessage();
+            
+            SOAPPart messagePart = soapMessageObject.getSOAPPart();
+            
+            StreamSource content = new StreamSource(new StringReader(soapEnvelope));
+            messagePart.setContent(content);    
+            
+            SOAPEnvelope envelope = messagePart.getEnvelope();            
             
             // The Node Body will always have just one child
-            childNodes = envelopee.getBody().getFirstChild().getChildNodes();            
+            childNodes = envelope.getBody().getFirstChild().getChildNodes();            
             
         } 
         catch (Exception e) {
@@ -98,12 +106,12 @@ public class SoapEnvelopeAssistant {
             
             if (tempNode.getNodeType() == Node.ELEMENT_NODE) {    
 
-                //GET THE VALUES ONLY IF THE CURRENT NODE IS A PARENT
-                // IN CASE IT IS NOT A PARENT, THE NAME OF THE FIRST CHILD WILL ALWAYS RETURN "#text" 
+                // GET THE VALUES ONLY IF THE CURRENT NODE IS A PARENT
+                // IN CASE IT IS A PARENT, THE NAME OF THE FIRST CHILD WILL NEVER RETURN "#text" 
                 // THE "#text" VALUE COMES FROM THE XML SPECIFICATION)
                 
                 if ( !tempNode.getFirstChild().getNodeName().equals("#text") ){
-                    //the user-defined type 
+                    // Start of the node that contains the user-defined type 
                     parametersList.add("Parameter Name = " + tempNode.getNodeName() + "  ( This is a user-defined type which contains the following )");
                     parametersList.add("[START]");
                     parametersList.add("\n");
@@ -114,7 +122,7 @@ public class SoapEnvelopeAssistant {
                 if (tempNode.hasChildNodes())
                     populateTheParameterListVariableWithTheNodesValue(tempNode.getChildNodes());
 
-                //GET THE VALUES ONLY IF THE CURRENT NODE IS NOT A PARENT
+                // GET THE VALUES ONLY IF THE CURRENT NODE IS NOT A PARENT
                 // IN CASE IT IS NOT A PARENT, THE NAME OF THE FIRST CHILD WILL ALWAYS RETURN "#text" 
                 // THE "#text" VALUE COMES FROM THE XML SPECIFICATION)
                 
@@ -124,7 +132,7 @@ public class SoapEnvelopeAssistant {
                     parametersList.add("\n");
                 }      
                 else{
-                    //the user-defined type 
+                    //End of the node that contains the user-defined type 
                     parametersList.add("[END]");
                     parametersList.add("\n");
                 }                 
@@ -143,7 +151,7 @@ public class SoapEnvelopeAssistant {
                 if (tempNode.hasChildNodes())
                     populateTheResponseValueListVariableWithTheNodesValue(tempNode.getChildNodes());
 
-                //GET THE VALUES ONLY IF THE CURRENT NODE IS NOT A PARENT
+                // GET THE VALUES ONLY IF THE CURRENT NODE IS NOT A PARENT
                 // IN CASE IT IS NOT A PARENT, THE NAME OF THE FIRST CHILD WILL ALWAYS RETURN "#text" 
                 // THE "#text" VALUE COMES FROM THE XML SPECIFICATION)
                 
@@ -165,7 +173,7 @@ public class SoapEnvelopeAssistant {
                     }  
                 }
                 catch(Exception e){
-                    // The execption means that the server has returned an exception as response
+                    // The exeception means that the server has returned an exception as response
                     FileAssistant.createLogFile ( e.toString());
                 }
             }
@@ -194,7 +202,10 @@ public class SoapEnvelopeAssistant {
                         }
                     }
                 }
-                else if (isTheRequestSection){                    
+                else if (isTheRequestSection){  
+                    // Get the line that contains the Soap Envelope to retrive the methods invoked by the client
+                    // Then retrieve the parameters and values passed by the Client
+                    
                     if ( line.contains("<S:Envelope")){
                         isTheRequestSection = false;
                         
@@ -203,7 +214,7 @@ public class SoapEnvelopeAssistant {
                         String envelope = "</S:Envelope>";
                         
                         String soapEnvelope = line.substring(index1, (index2 + envelope.length()));                        
-                        NodeList list = getSoapBodyFirstChildNodes(soapEnvelope);
+                        NodeList list = getSoapBodyOfFirstChildNodes(soapEnvelope);
                         
                         parametersList = new ArrayList();
                         populateTheParameterListVariableWithTheNodesValue(list);
@@ -216,6 +227,9 @@ public class SoapEnvelopeAssistant {
                     isTheResponseSection = true;                    
                 }
                 else if (isTheResponseSection) {
+                    // Get the line that contains the Soap Envelope to retrive the methods invoked by the client
+                    // Then retrieve the response of the Server
+                    
                     if ( line.contains("<S:Envelope")){
                         isTheResponseSection = false;
                         
@@ -224,7 +238,7 @@ public class SoapEnvelopeAssistant {
                         String envelope = "</S:Envelope>";      
                         
                         String soapEnvelope = line.substring(index1, (index2 + envelope.length()));                            
-                        NodeList list = getSoapBodyFirstChildNodes(soapEnvelope);
+                        NodeList list = getSoapBodyOfFirstChildNodes(soapEnvelope);
 
                         testResponseValue = new ArrayList();
                         hasResponseMultipleValues = false;
@@ -308,6 +322,9 @@ public class SoapEnvelopeAssistant {
                     isTheResponseSection = true;                    
                 }
                 else if (isTheResponseSection && !currentMethodName.isEmpty()) {
+                    // Get the line that contains the Soap Envelope to retrive the methods invoked by the client
+                    // Then retrieve the response of the Server
+                    
                     if ( line.contains("<S:Envelope")){
                         isTheResponseSection = false;
                         
@@ -316,7 +333,7 @@ public class SoapEnvelopeAssistant {
                         String envelope = "</S:Envelope>";      
                         
                         String soapEnvelope = line.substring(index1, (index2 + envelope.length()));                            
-                        NodeList list = getSoapBodyFirstChildNodes(soapEnvelope);
+                        NodeList list = getSoapBodyOfFirstChildNodes(soapEnvelope);
                         
                         populateTheUserAnswerListVariableIncludingServerOutput(list, currentMethodName);                       
                         currentMethodName ="";                                              
@@ -342,7 +359,7 @@ public class SoapEnvelopeAssistant {
                 if (tempNode.hasChildNodes())
                     populateTheResponseValueListVariableWithTheNodesValue(tempNode.getChildNodes());
 
-                //GET THE VALUES ONLY IF THE CURRENT NODE IS NOT A PARENT
+                // GET THE VALUES ONLY IF THE CURRENT NODE IS NOT A PARENT
                 // IN CASE IT IS NOT A PARENT, THE NAME OF THE FIRST CHILD WILL ALWAYS RETURN "#text" 
                 // THE "#text" VALUE COMES FROM THE XML SPECIFICATION)
                 

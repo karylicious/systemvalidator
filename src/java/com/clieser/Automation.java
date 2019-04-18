@@ -60,6 +60,7 @@ public class Automation {
             
             
             if(!isServerDeployed){
+                FileAssistant.createLogFile( serverDirectoryPath);
                 FileAssistant.deleteDirectory(new File(serverDirectoryPath));    
                 return "The uploaded project is not a web service! Please upload a valid web service and try again.";
             }

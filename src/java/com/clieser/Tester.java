@@ -195,7 +195,7 @@ public class Tester {
                 
                 testResponseList.add ("[INFO] System is searching for the Server project\n\n");    
                 
-                if( serverDirectoryPath.isEmpty() ){
+                if( serverDirectoryPath == null || serverDirectoryPath.isEmpty() ){
                     testResponseList.add ("[INFO] System did not find the Server project\n\n");
                     testResponseList.add ("\n\n");                    
                     testResultList.add (new TestResult(NameOfTheProjectBeingTested,"Server did not start","false"));                           
@@ -237,6 +237,8 @@ public class Tester {
                     testResultList.add (new TestResult(NameOfTheProjectBeingTested,"Client did not start","false"));                    
                     testResultList.add (new TestResult(NameOfTheProjectBeingTested,"Client did not communicate with the Server","false"));
                     testResultList.add (new TestResult(NameOfTheProjectBeingTested,"Server did not communicate with the Client","false"));
+                    ServerAssistant.undeplopyServer(serverDirectoryPath, userTemporaryDirectoryPath);  
+                    testResponseList.add ("[INFO] System has undeployed Server\n\n");
                     continue;
                 }          
                 
@@ -251,6 +253,8 @@ public class Tester {
                     testResultList.add (new TestResult(NameOfTheProjectBeingTested,"Client did not start","false"));
                     testResultList.add (new TestResult(NameOfTheProjectBeingTested,"Client did not communicate with the Server","false"));
                     testResultList.add (new TestResult(NameOfTheProjectBeingTested,"Server did not communicate with the Client","false"));
+                    ServerAssistant.undeplopyServer(serverDirectoryPath, userTemporaryDirectoryPath);  
+                    testResponseList.add ("[INFO] System has undeployed Server\n\n");
                     continue;
                 }
                                
@@ -264,6 +268,8 @@ public class Tester {
                     testResultList.add (new TestResult(NameOfTheProjectBeingTested,"Client did not start","false"));                    
                     testResultList.add (new TestResult(NameOfTheProjectBeingTested,"Client did not communicate with the Server","false"));
                     testResultList.add (new TestResult(NameOfTheProjectBeingTested,"Server did not communicate with the Client","false"));
+                    ServerAssistant.undeplopyServer(serverDirectoryPath, userTemporaryDirectoryPath);  
+                    testResponseList.add ("[INFO] System has undeployed Server\n\n");
                     continue;
                 }   
 
@@ -276,6 +282,8 @@ public class Tester {
                     testResponseList.add ("\n\n");                  
                     testResultList.add (new TestResult(NameOfTheProjectBeingTested,"Client did not communicate with the Server","false"));
                     testResultList.add (new TestResult(NameOfTheProjectBeingTested,"Server did not communicate with the Client","false"));
+                    ServerAssistant.undeplopyServer(serverDirectoryPath, userTemporaryDirectoryPath);  
+                    testResponseList.add ("[INFO] System has undeployed Server\n\n");
                     continue;
                 }
                 
@@ -287,6 +295,8 @@ public class Tester {
                     testResponseList.add ("[INFO] Server did not communicate with the Client. Please check your code\n\n");
                     testResponseList.add ("\n\n");                  
                     testResultList.add (new TestResult(NameOfTheProjectBeingTested,"Server did not communicate with the Client","false"));
+                    ServerAssistant.undeplopyServer(serverDirectoryPath, userTemporaryDirectoryPath);  
+                    testResponseList.add ("[INFO] System has undeployed Server\n\n");
                     continue;
                 }
                 

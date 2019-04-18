@@ -68,7 +68,7 @@ public class Grader {
                 
                 gradingResponseList.add ("[INFO] System is searching for the Server project\n\n");    
                 
-                if( serverDirectoryPath.isEmpty() ){
+                if( serverDirectoryPath == null || serverDirectoryPath.isEmpty() ){
                     gradingResponseList.add ("[INFO] System did not find the Server project\n\n");
                     gradingResponseList.add ("\n\n");                    
                     continue;
@@ -95,6 +95,8 @@ public class Grader {
                 if ( !new File(clientDirectoryPath + "\\build\\generated-sources\\jax-ws").exists() ){
                     gradingResponseList.add ("[INFO] System did not find the Client stubs\n\n");
                     gradingResponseList.add ("\n\n");
+                    ServerAssistant.undeplopyServer(serverDirectoryPath, userTemporaryDirectoryPath);  
+                    gradingResponseList.add ("[INFO] System has undeployed Server\n\n");
                     continue;
                 }          
                 
@@ -105,6 +107,8 @@ public class Grader {
                 if(!Files.exists(Paths.get(clientDirectoryPath + "\\build\\classes\\" + entryPoint + ".class"))){
                     gradingResponseList.add ("[INFO] System did not find the main class of the Client\n\n");
                     gradingResponseList.add ("\n\n");                    
+                    ServerAssistant.undeplopyServer(serverDirectoryPath, userTemporaryDirectoryPath); 
+                    gradingResponseList.add ("[INFO] System has undeployed Server\n\n");
                     continue;
                 }
                                
@@ -115,6 +119,8 @@ public class Grader {
                 if(!hasClientStarted){
                     gradingResponseList.add ("[INFO] Client did not start. Please check your code\n\n");
                     gradingResponseList.add ("\n\n");
+                    ServerAssistant.undeplopyServer(serverDirectoryPath, userTemporaryDirectoryPath);  
+                    gradingResponseList.add ("[INFO] System has undeployed Server\n\n");
                     continue;
                 }   
 
@@ -124,6 +130,8 @@ public class Grader {
                 if( !ClientAssistant.didClientCommunicatedWithServer(clientDirectoryPath) ){
                     gradingResponseList.add ("[INFO] Client did not communicate with the Server. Please check your code\n\n");
                     gradingResponseList.add ("\n\n");                  
+                    ServerAssistant.undeplopyServer(serverDirectoryPath, userTemporaryDirectoryPath);  
+                    gradingResponseList.add ("[INFO] System has undeployed Server\n\n");
                     continue;
                 }
                 
@@ -132,7 +140,9 @@ public class Grader {
                 
                 if( !ServerAssistant.didServerCommunicatedWithClient(clientDirectoryPath, serverDirectoryPath) ){
                     gradingResponseList.add ("[INFO] Server did not communicate with the Client. Please check your code\n\n");
-                    gradingResponseList.add ("\n\n");                  
+                    gradingResponseList.add ("\n\n");                 
+                    ServerAssistant.undeplopyServer(serverDirectoryPath, userTemporaryDirectoryPath);  
+                    gradingResponseList.add ("[INFO] System has undeployed Server\n\n");
                     continue;
                 }
                 

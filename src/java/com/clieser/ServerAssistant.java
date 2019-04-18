@@ -16,7 +16,7 @@ import org.w3c.dom.NodeList;
 public class ServerAssistant {
     
     private static final String ANT_DIRECTORY_PATH = "C:\\ant\\bin";
-    private static final String GLASSFISH_BIN_DIRECTORY_PATH = "C:\\Program Files\\glassfish-4.1.1\\bin";
+    private static final String GLASSFISH_BIN_DIRECTORY_PATH = "\"C:\\Program Files\\glassfish-4.1.1\\bin\"";
     private static final String NETBEANS_COPY_LIBS_TASK_MODULE_PATH = "\"C:\\Program Files\\NetBeans 8.2\\java\\ant\\extra\\org-netbeans-modules-java-j2seproject-copylibstask\"";
              
     public static boolean hasServerBeenDeployed(String serverDirectoryPath, String userTemporaryDirectoryPath){   
@@ -24,37 +24,44 @@ public class ServerAssistant {
             File file = new File(serverDirectoryPath);
             String projectName = file.getName();
                         
-            //ANT BUILD
+            //ANT BUILD COMMAND
             ArrayList<String> commandsList = new ArrayList();
             commandsList.add("cd " + ANT_DIRECTORY_PATH);
-            commandsList.add("ant -Dlibs.CopyLibs.classpath=" + NETBEANS_COPY_LIBS_TASK_MODULE_PATH + " -f " + serverDirectoryPath);
+            commandsList.add("ant -Dlibs.CopyLibs.classpath=" + NETBEANS_COPY_LIBS_TASK_MODULE_PATH + " -f \"" + serverDirectoryPath+"\"");
             
-            String antBuildShFile = userTemporaryDirectoryPath + "\\antbuild-"+new SimpleDateFormat("yyyyMMddHHmmss").format(new Date())+".bat";
-            FileAssistant.createNewShFile(antBuildShFile, commandsList);
+            String antBuildBatchFile = userTemporaryDirectoryPath + "\\antbuild-"+new SimpleDateFormat("yyyyMMddHHmmss").format(new Date())+".bat";
+            FileAssistant.createNewBatchFile(antBuildBatchFile, commandsList);
 
-            Process process1 = Runtime.getRuntime().exec("cmd /c "+antBuildShFile);          
+            Process process1 = Runtime.getRuntime().exec(antBuildBatchFile);          
             Thread.currentThread().sleep(7000l);          
             
-            //GLASSFISH DEPLOY
+            //GLASSFISH DEPLOY COMMAND
             commandsList = new ArrayList();
             
             commandsList.add("cd "+ GLASSFISH_BIN_DIRECTORY_PATH);
-            commandsList.add("asadmin deploy \""+serverDirectoryPath +"\\dist\\"+projectName+".war\"");
             
-            String antDeployShFile = userTemporaryDirectoryPath + "\\antdeploy-"+new SimpleDateFormat("yyyyMMddHHmmss").format(new Date())+".bat";
-            FileAssistant.createNewShFile(antDeployShFile, commandsList);
+            // There are some cases where the name of the serverDirectoryPath will not include backslah
+            String lastSlash = serverDirectoryPath.substring(serverDirectoryPath.length() - 1);
+            
+            if (!lastSlash.equals("\\"))
+                lastSlash ="\\";
+            
+            commandsList.add(".\\asadmin deploy \""+serverDirectoryPath + lastSlash + "dist\\"+projectName+".war\"");
+            
+            String glassFishDeploymentBatchFile = userTemporaryDirectoryPath + "\\glassfishdeploy-"+new SimpleDateFormat("yyyyMMddHHmmss").format(new Date())+".bat";
+            FileAssistant.createNewBatchFile(glassFishDeploymentBatchFile, commandsList);
 
-            Process process2 = Runtime.getRuntime().exec("cmd /c " + antDeployShFile);  
+            Process process2 = Runtime.getRuntime().exec(glassFishDeploymentBatchFile);  
             Thread.currentThread().sleep(5000l);                        
             
             //GET LIST OF DEPLOYED APPLICATION ON GLASSFISH
             commandsList = new ArrayList();
             commandsList.add("cd "+ GLASSFISH_BIN_DIRECTORY_PATH);
-            commandsList.add("asadmin list-applications --type web");
+            commandsList.add(".\\asadmin list-applications --type web");
             
-            String deployedListdShFile = userTemporaryDirectoryPath + "\\deployedlist-"+new SimpleDateFormat("yyyyMMddHHmmss").format(new Date())+".bat";
-            FileAssistant.createNewShFile(deployedListdShFile, commandsList);
-            Process process3 = Runtime.getRuntime().exec("cmd /c " + deployedListdShFile);
+            String deployedListdShFile = userTemporaryDirectoryPath + "\\deployedapplist-"+new SimpleDateFormat("yyyyMMddHHmmss").format(new Date())+".bat";
+            FileAssistant.createNewBatchFile(deployedListdShFile, commandsList);
+            Process process3 = Runtime.getRuntime().exec(deployedListdShFile);
                         
             BufferedReader br = new BufferedReader(new InputStreamReader(process3.getInputStream())); 
             String line;
@@ -90,15 +97,22 @@ public class ServerAssistant {
             File file = new File(serverDirectoryPath);
             String projectName = file.getName();
             
-            //GLASSSFISH DEPLOY
+            //GLASSSFISH UNDEPLOY COMMAND
             ArrayList<String> commandsList = new ArrayList();
             commandsList.add("cd " + GLASSFISH_BIN_DIRECTORY_PATH);
-            commandsList.add("asadmin undeploy \""+serverDirectoryPath +"\\dist\\"+projectName+"\"");
+            
+              // There are some cases where the name of the serverDirectoryPath will not include backslah
+            String lastSlash = serverDirectoryPath.substring(serverDirectoryPath.length() - 1);
+            
+            if (!lastSlash.equals("\\"))
+                lastSlash ="\\";
+            
+            commandsList.add(".\\asadmin undeploy \""+serverDirectoryPath + lastSlash + "dist\\"+projectName+"\"");
                         
-            String antUndeployShFile = userTemporaryDirectoryPath + "\\antundeploy-"+new SimpleDateFormat("yyyyMMddHHmmss").format(new Date())+".bat";
-            FileAssistant.createNewShFile(antUndeployShFile, commandsList);
+            String glassFishUndeployBatchFile = userTemporaryDirectoryPath + "\\glassfishundeploy-"+new SimpleDateFormat("yyyyMMddHHmmss").format(new Date())+".bat";
+            FileAssistant.createNewBatchFile(glassFishUndeployBatchFile, commandsList);
 
-            Process process = Runtime.getRuntime().exec("cmd /c " + antUndeployShFile);           
+            Process process = Runtime.getRuntime().exec(glassFishUndeployBatchFile);           
             Thread.currentThread().sleep(3000l);
         }
         catch(Exception e){            
