@@ -54,6 +54,7 @@ public class Automation {
             
             projectName = project.get(0); 
             projectName = projectName.replaceAll("/build/", "");
+            projectName = projectName.replaceAll("/", "");
             
             String serverDirectoryPath = FileAssistant.getExercisesDirectoryPath() + "\\" + projectName;                       
                         
