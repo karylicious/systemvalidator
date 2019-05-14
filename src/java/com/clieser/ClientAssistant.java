@@ -70,7 +70,7 @@ public class ClientAssistant {
         return null;
     }    
        
-     public static boolean didClientCommunicatedWithServer(String pathProjectBeingTested){
+    public static boolean didClientCommunicatedWithServer(String pathProjectBeingTested){
         try{
             File file = new File(pathProjectBeingTested + "\\traced-soap-traffic.txt");   
             BufferedReader br = new BufferedReader(new FileReader(file)); 

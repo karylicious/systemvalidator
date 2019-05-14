@@ -223,10 +223,11 @@ public class Grader {
             
             FileAssistant.createDirectory(userUploadDirectoryPath);
             FileAssistant.uploadFile(selectedFile, selectedFileName, userUploadDirectoryPath);  
-            String zipFilePath = userUploadDirectoryPath + "\\" + selectedFileName;
+            
 
             //>>>>>>>>>>>>>>>>    UNZIP OF THE FILE AND ITERATION OVER LIST OF PROJECTS FOUND    <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
             
+            String zipFilePath = userUploadDirectoryPath + "\\" + selectedFileName;
             String unzipLocation = userTemporaryDirectoryPath + "\\"+selectedFileName; 
             
             // unzip inside of a new directory which as the same name as the zip file name
@@ -238,23 +239,24 @@ public class Grader {
                 gradingResponseList.add ("\n\n");
                                 
                 String NameOfTheProjectBeingTested = selectedFileName + ".zip";                       
+                String[] projectName = listOfProjectsToBeTested.get(i).split(".zip");
+                String clientDirectoryPath = unzipLocation +"\\" + projectName[0];  
                 
-                String clientDirectoryPath = ClientAssistant.getClientProjectPath(unzipLocation, clientEntryPoint);                
-                
-                 if(listOfProjectsToBeTested.size() > 1){     
+                if(listOfProjectsToBeTested.size() > 1){     
                      
                     //>>>>>>>>>>>>>>>>>>  IN CASE OF MULTIPLE PROJECTS UNZIP ONE BY ONE  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<    
                     
-                    zipFilePath = userTemporaryDirectoryPath+ "\\"+selectedFileName +"\\"+listOfProjectsToBeTested.get(i);                  
-                       
-                    String[] foundProjectName = listOfProjectsToBeTested.get(i).split(".zip");
+                    zipFilePath = userTemporaryDirectoryPath+ "\\"+selectedFileName +"\\"+listOfProjectsToBeTested.get(i);   
                     
                     // unzip inside of a new directory which as the same name as the zip file name but outside the parent directory    
                     
-                    unzipLocation = userTemporaryDirectoryPath + "\\" + foundProjectName[0];                     
-                    FileAssistant.unzipAndGetTheProjectsToBeTested(zipFilePath, unzipLocation, false);                      
+                    clientDirectoryPath = userTemporaryDirectoryPath + "\\" + projectName[0];                     
+                    FileAssistant.unzipAndGetTheProjectsToBeTested(zipFilePath, clientDirectoryPath, false);                      
                     
-                    clientDirectoryPath = ClientAssistant.getClientProjectPath(unzipLocation, clientEntryPoint);                                        
+                    String[] subDirectories = FileAssistant.getSubdirectories(clientDirectoryPath);
+                    
+                    // The array will expect to have just one directory with the name 
+                    clientDirectoryPath += "\\" +subDirectories[0];                                       
                     
                     NameOfTheProjectBeingTested = listOfProjectsToBeTested.get(i);                     
                 }                                  
@@ -279,6 +281,8 @@ public class Grader {
                 gradingResponseList.add ("[INFO] System is searching for the main class of the Client\n\n");                
                 
                 String entryPoint = clientEntryPoint.replace('.', '\\');
+                FileAssistant.createLogFile(clientDirectoryPath);
+                FileAssistant.createLogFile(clientEntryPoint);
                 if(!Files.exists(Paths.get(clientDirectoryPath + "\\build\\classes\\" + entryPoint + ".class"))){
                     gradingResponseList.add ("[INFO] System did not find the main class of the Client\n\n");
                     gradingResponseList.add ("\n\n");                    

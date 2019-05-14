@@ -140,7 +140,7 @@ public class FileAssistant {
         return file.list();
     }
                
-    public static ArrayList<String> unzipAndGetTheProjectsToBeTested(final String zipFilePath, String unzipLocation, boolean isAnExerciseFile) throws IOException { 
+    public static ArrayList<String> unzipAndGetTheProjectsToBeTested(String zipFilePath, String unzipLocation, boolean isAnExerciseFile) throws IOException { 
         ArrayList<String> listOfProjectsToBeTested = new ArrayList();
         // Open the zip file
                 

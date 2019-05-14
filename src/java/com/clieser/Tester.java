@@ -135,7 +135,7 @@ public class Tester {
             FileAssistant.createLogFile ( e.toString());
         }     
         testResponseList.add("[INFO] Test has finished\n\n");  
-        FileAssistant. deleteDirectory(new File(userTemporaryDirectoryPath));      
+        FileAssistant.deleteDirectory(new File(userTemporaryDirectoryPath));      
         return new Reply(testResponseList, testResultList);
     }          
    

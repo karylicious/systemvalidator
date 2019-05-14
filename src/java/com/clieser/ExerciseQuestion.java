@@ -4,7 +4,7 @@ public class ExerciseQuestion {
     
     private String expectedInvokedMethod;
     private double points;
-    String expectedOutput;
+    private String expectedOutput;
     
     ExerciseQuestion(String _expectedInvokedMethod, String _expectedOutput, double _points){
         expectedInvokedMethod = _expectedInvokedMethod;

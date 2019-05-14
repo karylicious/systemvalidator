@@ -52,7 +52,7 @@ public class ServerAssistant {
             FileAssistant.createNewBatchFile(glassFishDeploymentBatchFile, commandsList);
 
             Process process2 = Runtime.getRuntime().exec(glassFishDeploymentBatchFile);  
-            Thread.currentThread().sleep(3000l);                        
+            Thread.currentThread().sleep(5000l);                        
             
             //GET LIST OF DEPLOYED APPLICATION ON GLASSFISH
             commandsList = new ArrayList();
@@ -62,7 +62,7 @@ public class ServerAssistant {
             String deployedListdShFile = userTemporaryDirectoryPath + "\\deployedapplist-"+new SimpleDateFormat("yyyyMMddHHmmss").format(new Date())+".bat";
             FileAssistant.createNewBatchFile(deployedListdShFile, commandsList);
             Process process3 = Runtime.getRuntime().exec(deployedListdShFile);
-            Thread.currentThread().sleep(4000l);
+            Thread.currentThread().sleep(14000l);
             
             BufferedReader br = new BufferedReader(new InputStreamReader(process3.getInputStream())); 
             String line;
@@ -133,7 +133,7 @@ public class ServerAssistant {
         });
         
         for (int i = 0; i < directories.length; i ++){
-            if (new File(unzipLocation+"\\"+directories[i]+ "\\build\\web").exists()) {
+            if (new File(unzipLocation+"\\"+directories[i]+ "\\web").exists()) {
                return unzipLocation+"\\"+directories[i];
             }
         }
